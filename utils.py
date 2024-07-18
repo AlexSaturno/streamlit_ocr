@@ -36,6 +36,7 @@ def find_tesseract_binary() -> str:
 
 
 # set tesseract binary path
+# pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
 pytesseract.pytesseract.tesseract_cmd = find_tesseract_binary()
 if not pytesseract.pytesseract.tesseract_cmd:
     st.error("Tesseract binary not found in PATH. Please install Tesseract.")
@@ -50,7 +51,10 @@ def convert_pdf_to_images(pdf_path):
     )
     if not os.path.exists(img_path):
         os.makedirs(img_path)
-    images = convert_from_path(pdf_path=pdf_path)
+    images = convert_from_path(
+        pdf_path=pdf_path,
+        # poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
+    )
     for i in range(len(images)):
         images[i].save(os.path.join(img_path, "page" + str(i) + ".jpg"), "JPEG")
     return img_path
@@ -273,7 +277,7 @@ def cria_chain_conversa():
     # Embeddings
     embeddings_model = AzureOpenAIEmbeddings(
         api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
-        base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
     )
 
@@ -284,7 +288,7 @@ def cria_chain_conversa():
         model=get_config("model_name"),
         api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
-        base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
     )
     memory = ConversationBufferMemory(
         return_messages=True, memory_key="chat_history", output_key="answer"
