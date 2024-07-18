@@ -3,6 +3,7 @@
 ### ====================================
 from pathlib import Path
 import os
+from langchain_openai import AzureChatOpenAI
 from pdf2image import convert_from_path
 import cv2
 import pytesseract
@@ -11,9 +12,9 @@ import numpy as np
 import re
 from langchain_community.document_loaders.pdf import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain_openai.embeddings import AzureOpenAIEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
-from langchain_openai.chat_models import ChatOpenAI
+from langchain_openai.chat_models import AzureChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
@@ -253,7 +254,7 @@ def text_splitter(documentos):
 
 
 def vector_store(documentos):
-    embedding_model = OpenAIEmbeddings()
+    embedding_model = AzureOpenAIEmbeddings()
     vector_store = FAISS.from_documents(documents=documentos, embedding=embedding_model)
     return vector_store
 
@@ -270,7 +271,7 @@ def cria_chain_conversa():
     textos = recur_split.split_text(texto)
 
     # Embeddings
-    embeddings_model = OpenAIEmbeddings(
+    embeddings_model = AzureOpenAIEmbeddings(
         api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
         base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
@@ -279,8 +280,9 @@ def cria_chain_conversa():
     # Vector Store
     vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
 
-    chat = ChatOpenAI(
+    chat = AzureChatOpenAI(
         model=get_config("model_name"),
+        api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
         base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
     )
