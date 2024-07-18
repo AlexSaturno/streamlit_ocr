@@ -271,8 +271,7 @@ def cria_chain_conversa():
 
     # Embeddings
     embeddings_model = OpenAIEmbeddings(
-        openai_api_type=st.secrets["OPENAI_API_TYPE"],
-        api_version=st.secrets["OPENAI_API_VERSION"],
+        api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
         base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
     )
