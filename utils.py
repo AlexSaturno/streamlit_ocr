@@ -27,10 +27,12 @@ PASTA_IMAGENS = Path(__file__).parent / "files_images"
 if not os.path.exists(PASTA_ARQUIVOS):
     os.makedirs(PASTA_ARQUIVOS)
 
+
 # search for tesseract binary in path
 @st.cache_resource
 def find_tesseract_binary() -> str:
     return shutil.which("tesseract")
+
 
 # set tesseract binary path
 pytesseract.pytesseract.tesseract_cmd = find_tesseract_binary()
@@ -268,13 +270,20 @@ def cria_chain_conversa():
     textos = recur_split.split_text(texto)
 
     # Embeddings
-    embeddings_model = OpenAIEmbeddings(api_key=st.secrets["OPENAI_API_KEY"])
+    embeddings_model = OpenAIEmbeddings(
+        openai_api_type="azure",
+        api_version="2022-12-01",
+        base_url="https://poc-openai-safra.openai.azure.com",
+        api_key=st.secrets["OPENAI_API_KEY"],
+    )
 
     # Vector Store
     vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
 
     chat = ChatOpenAI(
-        model=get_config("model_name"), api_key=st.secrets["OPENAI_API_KEY"]
+        model=get_config("model_name"),
+        api_key=st.secrets["OPENAI_API_KEY"],
+        base_url="https://poc-openai-safra.openai.azure.com",
     )
     memory = ConversationBufferMemory(
         return_messages=True, memory_key="chat_history", output_key="answer"
