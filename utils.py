@@ -21,6 +21,10 @@ import streamlit as st
 from configs import *
 
 PASTA_ARQUIVOS = Path(__file__).parent / "arquivos"
+PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
+PASTA_IMAGENS = Path(__file__).parent / "files_images"
+if not os.path.exists(PASTA_ARQUIVOS):
+    os.makedirs(PASTA_ARQUIVOS)
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 
@@ -170,9 +174,11 @@ def detect_figures(imagem, contador_de_figuras):
             figures.append(roi)
             contador_de_figuras = contador_de_figuras + 1
 
-            cv2.imwrite(f"imagens_debug/figure_{contador_de_figuras}.jpg", roi)
+            if not os.path.exists(img_path):
+                os.makedirs(img_path)       
+            cv2.imwrite(f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg", roi)
             imagem_recortada = cv2.imread(
-                f"imagens_debug/figure_{contador_de_figuras}.jpg"
+                f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg"
             )
             imagem_processada = preprocess_for_ocr_figuras(imagem_recortada)
             text = pytesseract.image_to_string(imagem_processada).strip()
