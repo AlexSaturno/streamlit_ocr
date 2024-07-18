@@ -271,10 +271,10 @@ def cria_chain_conversa():
 
     # Embeddings
     embeddings_model = OpenAIEmbeddings(
-        openai_api_type="azure",
-        api_version="2022-12-01",
-        base_url="https://poc-openai-safra.openai.azure.com",
-        api_key=st.secrets["OPENAI_API_KEY"],
+        openai_api_type=st.secrets["OPENAI_API_TYPE"],
+        api_version=st.secrets["OPENAI_API_VERSION"],
+        base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
+        api_key=st.secrets["AZURE_OPENAI_API_KEY"],
     )
 
     # Vector Store
@@ -282,8 +282,8 @@ def cria_chain_conversa():
 
     chat = ChatOpenAI(
         model=get_config("model_name"),
-        api_key=st.secrets["OPENAI_API_KEY"],
-        base_url="https://poc-openai-safra.openai.azure.com",
+        api_key=st.secrets["AZURE_OPENAI_API_KEY"],
+        base_url=st.secrets["AZURE_OPENAI_ENDPOINT"],
     )
     memory = ConversationBufferMemory(
         return_messages=True, memory_key="chat_history", output_key="answer"
