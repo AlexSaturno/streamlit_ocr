@@ -19,14 +19,23 @@ from langchain.chains.conversational_retrieval.base import ConversationalRetriev
 from langchain.prompts import PromptTemplate
 import streamlit as st
 from configs import *
+import shutil
 
 PASTA_ARQUIVOS = Path(__file__).parent / "arquivos"
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
-# TESSERACT_PATH = Path(__file__).parent / "Tesseract-OCR/tesseract.exe"
 if not os.path.exists(PASTA_ARQUIVOS):
     os.makedirs(PASTA_ARQUIVOS)
-# pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+
+# search for tesseract binary in path
+@st.cache_resource
+def find_tesseract_binary() -> str:
+    return shutil.which("tesseract")
+
+# set tesseract binary path
+pytesseract.pytesseract.tesseract_cmd = find_tesseract_binary()
+if not pytesseract.pytesseract.tesseract_cmd:
+    st.error("Tesseract binary not found in PATH. Please install Tesseract.")
 
 
 ### ====================================
