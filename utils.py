@@ -25,7 +25,6 @@ PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
 if not os.path.exists(PASTA_ARQUIVOS):
     os.makedirs(PASTA_ARQUIVOS)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 
 ### ====================================
