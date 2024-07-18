@@ -181,8 +181,8 @@ def detect_figures(imagem, contador_de_figuras):
             figures.append(roi)
             contador_de_figuras = contador_de_figuras + 1
 
-            if not os.path.exists(img_path):
-                os.makedirs(img_path)
+            if not os.path.exists(PASTA_IMAGENS_DEBUG):
+                os.makedirs(PASTA_IMAGENS_DEBUG)
             cv2.imwrite(f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg", roi)
             imagem_recortada = cv2.imread(
                 f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg"
