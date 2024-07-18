@@ -37,10 +37,7 @@ def convert_pdf_to_images(pdf_path):
     )
     if not os.path.exists(img_path):
         os.makedirs(img_path)
-    images = convert_from_path(
-        pdf_path=pdf_path,
-        poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
-    )
+    images = convert_from_path(pdf_path=pdf_path)
     for i in range(len(images)):
         images[i].save(os.path.join(img_path, "page" + str(i) + ".jpg"), "JPEG")
     return img_path
@@ -175,7 +172,7 @@ def detect_figures(imagem, contador_de_figuras):
             contador_de_figuras = contador_de_figuras + 1
 
             if not os.path.exists(img_path):
-                os.makedirs(img_path)       
+                os.makedirs(img_path)
             cv2.imwrite(f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg", roi)
             imagem_recortada = cv2.imread(
                 f"{PASTA_IMAGENS_DEBUG}/figure_{contador_de_figuras}.jpg"
@@ -266,7 +263,9 @@ def cria_chain_conversa():
     # Vector Store
     vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
 
-    chat = ChatOpenAI(model=get_config("model_name"), api_key=st.secrets["OPENAI_API_KEY"])
+    chat = ChatOpenAI(
+        model=get_config("model_name"), api_key=st.secrets["OPENAI_API_KEY"]
+    )
     memory = ConversationBufferMemory(
         return_messages=True, memory_key="chat_history", output_key="answer"
     )
