@@ -268,7 +268,7 @@ def cria_chain_conversa():
     textos = recur_split.split_text(texto)
 
     # Embeddings
-    embeddings_model = OpenAIEmbeddings()
+    embeddings_model = OpenAIEmbeddings(api_key=st.secrets["OPENAI_API_KEY"])
 
     # Vector Store
     vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
