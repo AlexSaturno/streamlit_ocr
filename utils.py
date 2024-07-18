@@ -23,10 +23,10 @@ from configs import *
 PASTA_ARQUIVOS = Path(__file__).parent / "arquivos"
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
-TESSERACT_PATH = Path(__file__).parent / "Tesseract-OCR/tesseract.exe"
+# TESSERACT_PATH = Path(__file__).parent / "Tesseract-OCR/tesseract.exe"
 if not os.path.exists(PASTA_ARQUIVOS):
     os.makedirs(PASTA_ARQUIVOS)
-pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+# pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 
 ### ====================================
