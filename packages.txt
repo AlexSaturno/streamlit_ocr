@@ -2,3 +2,5 @@ tesseract-ocr
 tesseract-ocr-por
 libegl1
 python3-opencv
+poppler-utils
+poppler
