@@ -1,7 +1,6 @@
 tesseract
 tesseract-ocr
 tesseract-ocr-por
-tesseract-ocr-dev
 libtesseract-dev
 libegl1
 python3-opencv
