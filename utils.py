@@ -19,9 +19,7 @@ from langchain.chains.conversational_retrieval.base import ConversationalRetriev
 from langchain.prompts import PromptTemplate
 import streamlit as st
 from configs import *
-from dotenv import load_dotenv, find_dotenv
 
-_ = load_dotenv(find_dotenv())
 PASTA_ARQUIVOS = Path(__file__).parent / "arquivos"
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
@@ -262,7 +260,7 @@ def cria_chain_conversa():
     # Vector Store
     vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
 
-    chat = ChatOpenAI(model=get_config("model_name"))
+    chat = ChatOpenAI(model=get_config("model_name"), api_key=st.secrets["OPENAI_API_KEY"])
     memory = ConversationBufferMemory(
         return_messages=True, memory_key="chat_history", output_key="answer"
     )
