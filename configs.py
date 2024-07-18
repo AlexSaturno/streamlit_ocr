@@ -1,6 +1,6 @@
 import streamlit as st
 
-MODEL_NAME = "gpt-3.5-turbo-0125"
+MODEL_NAME = "gpt-4-turbo"
 RETRIEVAL_SEARCH_TYPE = "mmr"  # MMR ou Semantic Search
 RETRIEVAL_KWARGS = {
     "k": 5,
