@@ -286,6 +286,7 @@ def cria_chain_conversa():
 
     chat = AzureChatOpenAI(
         model=get_config("model_name"),
+        azure_deployment=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
         api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
         api_key=st.secrets["AZURE_OPENAI_API_KEY"],
         azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
