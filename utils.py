@@ -22,12 +22,18 @@ import streamlit as st
 from configs import *
 import shutil
 
+
+PASTA_RAIZ = (
+    Path(__file__).parent
+    # r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI"
+)
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
 PASTA_ARQUIVOS = Path(__file__).parent / "vectordb"
 if not os.path.exists(PASTA_IMAGENS):
     os.makedirs(PASTA_IMAGENS)
-
+if not os.path.exists(PASTA_ARQUIVOS):
+    os.makedirs(PASTA_ARQUIVOS)
 
 # search for tesseract binary in path
 @st.cache_resource

@@ -33,11 +33,6 @@ from reportlab.pdfgen import canvas
 import base64
 from utils import *
 
-pasta_raiz = (
-    Path(__file__).parent
-    # r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI"
-)
-
 ################################################################################################################################
 # Ambiente
 ################################################################################################################################
@@ -208,6 +203,7 @@ st.set_page_config(
 
 initialize_session_state()
 
+
 def main():
     if "doc_retrieval" not in st.session_state:
         st.session_state["doc_retrieval"] = ""
@@ -310,7 +306,7 @@ def main():
                         st.session_state["file_name"] = pdf_file.name[:-4]
 
                         file_name = st.session_state["file_name"]
-                        folder_path = pasta_raiz + "/vectordb/"
+                        folder_path = PASTA_ARQUIVOS
                         full_path = folder_path + file_name
 
                         try:
@@ -344,7 +340,7 @@ def main():
 
                 if st.session_state["tipo_documento"] is not None:
                     with open(
-                        pasta_raiz + "/perguntas_sidebar.json", "r", encoding="utf8"
+                        PASTA_RAIZ + "/perguntas_sidebar.json", "r", encoding="utf8"
                     ) as f:
                         perguntas = json.load(f)
                     perguntas_selecionadas = list(
@@ -486,7 +482,7 @@ def main():
                                 with st.container():
                                     # criacão da pasta do usuario
                                     pasta_respostas = os.path.join(
-                                        pasta_raiz + "/respostas", username
+                                        PASTA_RAIZ + "/respostas", username
                                     )
                                     if not os.path.exists(pasta_respostas):
                                         os.makedirs(pasta_respostas)
