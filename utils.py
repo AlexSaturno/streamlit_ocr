@@ -30,10 +30,13 @@ PASTA_RAIZ = (
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
 PASTA_ARQUIVOS = Path(__file__).parent / "vectordb"
+PASTA_RESPOSTAS = Path(__file__).parent / "respostas"
 if not os.path.exists(PASTA_IMAGENS):
     os.makedirs(PASTA_IMAGENS)
 if not os.path.exists(PASTA_ARQUIVOS):
     os.makedirs(PASTA_ARQUIVOS)
+if not os.path.exists(PASTA_RESPOSTAS):
+    os.makedirs(PASTA_RESPOSTAS)
 
 # search for tesseract binary in path
 @st.cache_resource
