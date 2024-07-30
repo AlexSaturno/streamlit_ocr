@@ -31,7 +31,7 @@ def formatar_perguntas(texto):
         perguntas_formatadas[chave] = pergunta.strip()
     return perguntas_formatadas
 
-username = os.getenv("HADOOP_USER_NAME")
+username = "palomar" #os.getenv("HADOOP_USER_NAME")
 
 if username in ["max.saito", "palomar", "mdtorre"]:
 
