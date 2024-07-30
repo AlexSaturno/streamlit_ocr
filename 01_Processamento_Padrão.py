@@ -338,7 +338,7 @@ def main():
 
                 if st.session_state["tipo_documento"] is not None:
                     with open(
-                        PASTA_RAIZ + "/perguntas_sidebar.json", "r", encoding="utf8"
+                        PASTA_RAIZ / "/perguntas_sidebar.json", "r", encoding="utf8"
                     ) as f:
                         perguntas = json.load(f)
                     perguntas_selecionadas = list(
@@ -480,7 +480,7 @@ def main():
                                 with st.container():
                                     # criacão da pasta do usuario
                                     pasta_respostas = os.path.join(
-                                        PASTA_RAIZ + "/respostas", username
+                                        PASTA_RAIZ / "/respostas", username
                                     )
                                     if not os.path.exists(pasta_respostas):
                                         os.makedirs(pasta_respostas)
