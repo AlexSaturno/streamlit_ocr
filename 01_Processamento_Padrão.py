@@ -510,7 +510,7 @@ def main():
                                     )
 
                                     col1, col2, col3 = st.columns(
-                                        [1, 1, 1], vertical_alignment="top"
+                                        [1, 1, 1]
                                     )
 
                                     with col1:
