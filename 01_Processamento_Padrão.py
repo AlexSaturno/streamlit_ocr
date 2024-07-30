@@ -338,7 +338,7 @@ def main():
 
                 if st.session_state["tipo_documento"] is not None:
                     with open(
-                        PASTA_RAIZ / "/perguntas_sidebar.json", "r", encoding="utf8"
+                        PASTA_RAIZ / "perguntas_sidebar.json", "r", encoding="utf8"
                     ) as f:
                         perguntas = json.load(f)
                     perguntas_selecionadas = list(
