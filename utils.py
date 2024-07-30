@@ -22,11 +22,11 @@ import streamlit as st
 from configs import *
 import shutil
 
-PASTA_ARQUIVOS = Path(__file__).parent / "arquivos"
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
-if not os.path.exists(PASTA_ARQUIVOS):
-    os.makedirs(PASTA_ARQUIVOS)
+PASTA_ARQUIVOS = Path(__file__).parent / "vectordb"
+if not os.path.exists(PASTA_IMAGENS):
+    os.makedirs(PASTA_IMAGENS)
 
 
 # search for tesseract binary in path
@@ -36,8 +36,8 @@ def find_tesseract_binary() -> str:
 
 
 # set tesseract binary path
-# pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
-pytesseract.pytesseract.tesseract_cmd = find_tesseract_binary()
+pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
+# pytesseract.pytesseract.tesseract_cmd = find_tesseract_binary()
 if not pytesseract.pytesseract.tesseract_cmd:
     st.error("Tesseract binary not found in PATH. Please install Tesseract.")
 
@@ -53,7 +53,7 @@ def convert_pdf_to_images(pdf_path):
         os.makedirs(img_path)
     images = convert_from_path(
         pdf_path=pdf_path,
-        # poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
+        poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
     )
     for i in range(len(images)):
         images[i].save(os.path.join(img_path, "page" + str(i) + ".jpg"), "JPEG")
@@ -165,8 +165,8 @@ def detect_figures(imagem, contador_de_figuras):
     # Pré-processar a imagem antes de aplicar o OCR
     imagem_processada = preprocess_for_ocr(imagem)
 
-    text = pytesseract.image_to_string(imagem_processada).strip()
-    text_chunks.append(text)
+    # text = pytesseract.image_to_string(imagem_processada).strip()
+    # text_chunks.append(text)
 
     # Identificar contornos
     bounding_boxes = extract_regions(imagem_processada)
@@ -207,105 +207,3 @@ def detect_figures(imagem, contador_de_figuras):
     extracted_text = "\n".join(text_chunks)
 
     return extracted_text, contador_de_figuras
-
-
-def ocr():
-    for file_name_relative in PASTA_ARQUIVOS.glob(
-        "*.pdf"
-    ):  ## first get full file name with directores using for loop
-        file_name_absolute = os.path.basename(
-            file_name_relative
-        )  ## Now get the file name with os.path.basename
-    extracted_text = ""
-    contador_de_figuras = 0
-    imgs_path = convert_pdf_to_images(f"{PASTA_ARQUIVOS}/{file_name_absolute}")
-    file_pages = os.listdir(imgs_path)
-    for file_page in file_pages:
-        image_path = os.path.join(imgs_path, file_page)
-        imagem = cv2.imread(image_path)
-        if imagem is not None:
-            page_text, contador_de_figuras = detect_figures(imagem, contador_de_figuras)
-            extracted_text += page_text + "\n"
-        else:
-            print(f"Erro ao carregar a imagem {image_path}")
-
-    return extracted_text
-
-
-def document_loader():
-    documentos = []
-    for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
-        loader = PyPDFLoader(str(arquivo))
-        documentos_arquivo = loader.load()
-        documentos.extend(documentos_arquivo)
-    return documentos
-
-
-def text_splitter(documentos):
-    recur_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2500, chunk_overlap=250, separators=["\n\n", "\n", " ", ""]
-    )
-
-    documentos = recur_splitter.split_documents(documentos)
-
-    for i, doc in enumerate(documentos):
-        doc.metadata["source"] = doc.metadata["source"].split("/")[
-            -1
-        ]  # Pegar só o nome do arquivo
-        doc.metadata["doc_id"] = i
-
-    return documentos
-
-
-def vector_store(documentos):
-    embedding_model = AzureOpenAIEmbeddings()
-    vector_store = FAISS.from_documents(documents=documentos, embedding=embedding_model)
-    return vector_store
-
-
-def cria_chain_conversa():
-    # documentos = document_loader()
-    # documentos = text_splitter(documentos)
-    # vectorstore = vector_store(documentos)
-    texto = ocr()
-    # Text Split
-    recur_split = RecursiveCharacterTextSplitter(
-        chunk_size=2500, chunk_overlap=250, separators=["\n\n", "\n", ".", " ", ""]
-    )
-    textos = recur_split.split_text(texto)
-
-    # Embeddings
-    embeddings_model = AzureOpenAIEmbeddings(
-        api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
-        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
-        api_key=st.secrets["AZURE_OPENAI_API_KEY"],
-    )
-
-    # Vector Store
-    vectorstore = FAISS.from_texts(texts=textos, embedding=embeddings_model)
-
-    chat = AzureChatOpenAI(
-        model=get_config("model_name"),
-        azure_deployment=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
-        api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
-        api_key=st.secrets["AZURE_OPENAI_API_KEY"],
-        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
-    )
-    memory = ConversationBufferMemory(
-        return_messages=True, memory_key="chat_history", output_key="answer"
-    )
-    retriever = vectorstore.as_retriever(
-        search_type=get_config("retrieval_search_type"),
-        search_kwargs=get_config("retrieval_kwargs"),
-    )
-    prompt = PromptTemplate.from_template(template=get_config("prompt"))
-    chat_chain = ConversationalRetrievalChain.from_llm(
-        llm=chat,
-        memory=memory,
-        retriever=retriever,
-        return_source_documents=True,
-        verbose=True,
-        combine_docs_chain_kwargs={"prompt": prompt},
-    )
-
-    st.session_state["chain"] = chat_chain

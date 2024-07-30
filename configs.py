@@ -24,7 +24,6 @@ Human: {question}
 AI: 
 """
 
-
 def get_config(config_name):
     if config_name.lower() in st.session_state:
         return st.session_state[config_name.lower()]
