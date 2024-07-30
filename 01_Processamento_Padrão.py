@@ -34,7 +34,8 @@ import base64
 from utils import *
 
 pasta_raiz = (
-    r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI"
+    Path(__file__).parent
+    # r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI"
 )
 
 ################################################################################################################################
