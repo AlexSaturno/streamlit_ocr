@@ -305,7 +305,7 @@ def main():
 
                         file_name = st.session_state["file_name"]
                         folder_path = PASTA_ARQUIVOS
-                        full_path = folder_path + file_name
+                        full_path = folder_path / file_name
 
                         try:
                             VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
