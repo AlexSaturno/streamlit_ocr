@@ -199,8 +199,6 @@ def zera_vetorizacao():
 ################################################################################################################################
 
 # # Inicio da aplicação
-initialize_session_state()
-
 st.set_page_config(
     page_title="FPO - Processamento de documentos",
     page_icon=":black_medium_square:",
@@ -208,6 +206,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+initialize_session_state()
 
 def main():
     if "doc_retrieval" not in st.session_state:
