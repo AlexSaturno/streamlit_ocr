@@ -480,7 +480,7 @@ def main():
                                 with st.container():
                                     # criacão da pasta do usuario
                                     pasta_respostas = os.path.join(
-                                        PASTA_RAIZ / "/respostas", username
+                                        PASTA_RESPOSTAS, username
                                     )
                                     if not os.path.exists(pasta_respostas):
                                         os.makedirs(pasta_respostas)
