@@ -6,6 +6,7 @@ import json
 import streamlit as st
 import string
 import random
+from utils import PASTA_RAIZ
 
 st.set_page_config(
     page_title="FPO - Processamento de documentos",
@@ -44,7 +45,7 @@ if username in ["max.saito", "palomar", "mdtorre"]:
         horizontal=True,
     )
     
-    file_path = r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI\perguntas_sidebar.json"
+    file_path = PASTA_RAIZ / "perguntas_sidebar.json"
     with open(file_path, "r", encoding="utf8") as f:
         json_data = json.load(f)
 
