@@ -433,7 +433,7 @@ def main():
 
                             with st.container(border=True):
                                 grid = st.columns(
-                                    [0.5, 3.8, 4, 1, 4], vertical_alignment="top"
+                                    [0.5, 3.8, 4, 1, 4]
                                 )
 
                                 with st.container(border=True):
@@ -487,7 +487,7 @@ def main():
                                     resposta_llm = atributos_pergunta["resposta_ia"]
 
                                     grid = st.columns(
-                                        [0.5, 3.8, 4, 1, 4], vertical_alignment="top"
+                                        [0.5, 3.8, 4, 1, 4]
                                     )
                                     indice = i + 1
                                     grid[0].markdown(indice)
@@ -558,7 +558,7 @@ def main():
                         with ph.container():
                             with st.container(border=True):
                                 grid = st.columns(
-                                    [0.5, 3.8, 4, 1, 4], vertical_alignment="top"
+                                    [0.5, 3.8, 4, 1, 4]
                                 )
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
@@ -646,7 +646,7 @@ def main():
                                     )
 
                                     grid = st.columns(
-                                        [0.5, 3.8, 4, 1, 4], vertical_alignment="top"
+                                        [0.5, 3.8, 4, 1, 4]
                                     )
 
                                     indice = i
@@ -742,7 +742,6 @@ def main():
                             with st.container(border=True):
                                 colA, colB, colC = st.columns(
                                     [2, 3, 1.5],
-                                    vertical_alignment="center",
                                     gap="large",
                                 )
                                 colA.radio(
