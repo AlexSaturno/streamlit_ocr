@@ -135,6 +135,8 @@ respostas/
 vectordb/
 files_images/
 arquivos/
+avaliacao/
+uploaded_files/
 
 # Spyder project settings
 .spyderproject
