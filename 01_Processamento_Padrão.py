@@ -96,7 +96,7 @@ pdf_overlap = 205
 
 
 # Funcoes auxiliares
-def ocr(pdf_file):
+def ocr(pdf_file, only_text=False):
     for file_name_relative in PASTA_ARQUIVOS.glob(
         "*.pdf"
     ):  ## first get full file name with directores using for loop
@@ -107,12 +107,17 @@ def ocr(pdf_file):
     contador_de_figuras = 0
     imgs_path = convert_pdf_to_images(f"{PASTA_ARQUIVOS}/{file_name_absolute}")
     file_pages = os.listdir(imgs_path)
-    print(len(file_pages))
+    # print(len(file_pages))
     for file_page in file_pages:
         image_path = os.path.join(imgs_path, file_page)
         imagem = cv2.imread(image_path)
         if imagem is not None:
-            page_text, contador_de_figuras = detect_figures(imagem, contador_de_figuras)
+            if only_text is True:
+                page_text = detect_text(imagem)
+            else:
+                page_text, contador_de_figuras = detect_figures(
+                    imagem, contador_de_figuras
+                )
             extracted_text += page_text + "\n"
         else:
             print(f"Erro ao carregar a imagem {image_path}")
@@ -279,16 +284,19 @@ def main():
 
             if not st.session_state["status_vetorizacao"]:
                 vetoriza = st.button("Vetorizar")
+                extrair_texto_ocr = False
                 if vetoriza:
 
                     with st.spinner("Vetorizando documento..."):
                         text = ""
                         text = ocr(pdf_file)
-
+                        ocr_text = text
+                        # print(f"OCR TEXT: {ocr_text}\n\n\n")
                         pdf_reader = PdfReader(pdf_file)
 
                         for page in pdf_reader.pages:
                             text += page.extract_text()
+                        # print(f"RAG TEXT: {text.replace(ocr_text, '', 1)}\n\n\n")
 
                         # metodo de extrair texto do Pdf
                         text_splitter = RecursiveCharacterTextSplitter(
@@ -314,7 +322,39 @@ def main():
                             st.session_state["status_vetorizacao"] = True
                             st.rerun()
                         except Exception as e:
-                            st.warning("Arquivo não pode ser processado.")
+                            extrair_texto_ocr = True
+                            st.warning("Arquivo será processado com OCR.")
+                if extrair_texto_ocr is True:
+                    text = ""
+                    text = ocr(pdf_file, True)
+                    ocr_text = text
+                    # print(f"OCR SOMENTE TEXTO: {ocr_text}\n\n\n")
+
+                    # metodo de extrair texto do Pdf
+                    text_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=pdf_chunk,
+                        chunk_overlap=pdf_overlap,
+                        length_function=len,
+                    )
+
+                    # Masse de texto do pdf
+                    chunks = text_splitter.split_text(text=text)
+
+                    # Escrevendo o nome do DB
+                    st.session_state["file_name"] = pdf_file.name[:-4]
+
+                    file_name = st.session_state["file_name"]
+                    folder_path = PASTA_ARQUIVOS
+                    full_path = folder_path / file_name
+
+                    try:
+                        VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
+                        VectorStore.save_local(full_path)
+                        st.session_state["vectordb"] = VectorStore
+                        st.session_state["status_vetorizacao"] = True
+                        st.rerun()
+                    except Exception as e:
+                        st.warning("Arquivo não pode ser processado.")
 
     if st.session_state["status_vetorizacao"]:
         tab1, tab2 = st.tabs(["Perguntas padrão", "Perguntas adicionais"])
@@ -509,9 +549,7 @@ def main():
                                         + file_name,
                                     )
 
-                                    col1, col2, col3 = st.columns(
-                                        [1, 1, 1]
-                                    )
+                                    col1, col2, col3 = st.columns([1, 1, 1])
 
                                     with col1:
                                         st.write("")

@@ -38,6 +38,7 @@ if not os.path.exists(PASTA_ARQUIVOS):
 if not os.path.exists(PASTA_RESPOSTAS):
     os.makedirs(PASTA_RESPOSTAS)
 
+
 # search for tesseract binary in path
 @st.cache_resource
 def find_tesseract_binary() -> str:
@@ -161,6 +162,19 @@ def is_figure(roi, box, min_width, min_height):
         return False, 3
 
     return True, 0
+
+
+def detect_text(imagem):
+    text_chunks = []
+
+    # Pré-processar a imagem antes de aplicar o OCR
+    imagem_processada = preprocess_for_ocr(imagem)
+
+    text = pytesseract.image_to_string(imagem_processada).strip()
+    text_chunks.append(text)
+    extracted_text = "\n".join(text_chunks)
+
+    return extracted_text
 
 
 def detect_figures(imagem, contador_de_figuras):
