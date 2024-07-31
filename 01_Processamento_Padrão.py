@@ -94,6 +94,7 @@ pdf_chunk = 2048
 pdf_overlap = 205
 ##############################################################################################################
 
+
 # Funcoes auxiliares
 def ocr(pdf_file, only_text=False):
     for file_name_relative in PASTA_ARQUIVOS.glob(
@@ -287,15 +288,21 @@ def main():
                 if vetoriza:
 
                     with st.spinner("Vetorizando documento..."):
-                        text = ""
-                        text = ocr(pdf_file)
-                        ocr_text = text
-                        # print(f"OCR TEXT: {ocr_text}\n\n\n")
+                        ocr_images_text = ""
+                        ocr_images_text = ocr(pdf_file)
+                        # print(f"debug. OCR TEXT: {ocr_images_text}\n\n\n")
                         pdf_reader = PdfReader(pdf_file)
 
+                        text = ""
                         for page in pdf_reader.pages:
                             text += page.extract_text()
-                        # print(f"RAG TEXT: {text.replace(ocr_text, '', 1)}\n\n\n")
+                        # print(f"debug. RAG TEXT: {text.replace(ocr_images_text, '', 1)}\n\n\n")
+
+                        ocr_text = ""
+                        if (text == "") or (len(text) < 2000):
+                            text = ocr(pdf_file, True)
+                            ocr_text = text
+                            # print(f"debug. OCR SOMENTE TEXTO: {ocr_text}\n\n\n")
 
                         # metodo de extrair texto do Pdf
                         text_splitter = RecursiveCharacterTextSplitter(
@@ -305,7 +312,8 @@ def main():
                         )
 
                         # Masse de texto do pdf
-                        chunks = text_splitter.split_text(text=text)
+                        full_text = ocr_images_text + text + ocr_text
+                        chunks = text_splitter.split_text(text=full_text)
 
                         # Escrevendo o nome do DB
                         st.session_state["file_name"] = pdf_file.name[:-4]
@@ -321,39 +329,7 @@ def main():
                             st.session_state["status_vetorizacao"] = True
                             st.rerun()
                         except Exception as e:
-                            extrair_texto_ocr = True
-                            st.warning("Arquivo será processado com OCR.")
-                if extrair_texto_ocr is True:
-                    text = ""
-                    text = ocr(pdf_file, True)
-                    ocr_text = text
-                    # print(f"OCR SOMENTE TEXTO: {ocr_text}\n\n\n")
-
-                    # metodo de extrair texto do Pdf
-                    text_splitter = RecursiveCharacterTextSplitter(
-                        chunk_size=pdf_chunk,
-                        chunk_overlap=pdf_overlap,
-                        length_function=len,
-                    )
-
-                    # Masse de texto do pdf
-                    chunks = text_splitter.split_text(text=text)
-
-                    # Escrevendo o nome do DB
-                    st.session_state["file_name"] = pdf_file.name[:-4]
-
-                    file_name = st.session_state["file_name"]
-                    folder_path = PASTA_ARQUIVOS
-                    full_path = folder_path / file_name
-
-                    try:
-                        VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
-                        VectorStore.save_local(full_path)
-                        st.session_state["vectordb"] = VectorStore
-                        st.session_state["status_vetorizacao"] = True
-                        st.rerun()
-                    except Exception as e:
-                        st.warning("Arquivo não pode ser processado.")
+                            st.warning("Arquivo não pode ser processado.")
 
     if st.session_state["status_vetorizacao"]:
         tab1, tab2 = st.tabs(["Perguntas padrão", "Perguntas adicionais"])
