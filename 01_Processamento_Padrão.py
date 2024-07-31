@@ -94,7 +94,6 @@ pdf_chunk = 2048
 pdf_overlap = 205
 ##############################################################################################################
 
-
 # Funcoes auxiliares
 def ocr(pdf_file, only_text=False):
     for file_name_relative in PASTA_ARQUIVOS.glob(
