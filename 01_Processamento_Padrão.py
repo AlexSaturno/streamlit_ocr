@@ -23,6 +23,7 @@ from PyPDF2 import PdfReader
 import numpy as np
 import pandas as pd
 from unidecode import unidecode
+import unicodedata
 from time import sleep
 
 import io
@@ -115,6 +116,69 @@ def ocr(pdf_file, only_text=False):
 
 
 # Funcoes auxiliares
+def normalize_filename(filename):
+    # Mapeamento de caracteres acentuados para não acentuados
+    substitutions = {
+        "á": "a",
+        "à": "a",
+        "ã": "a",
+        "â": "a",
+        "ä": "a",
+        "é": "e",
+        "è": "e",
+        "ê": "e",
+        "ë": "e",
+        "í": "i",
+        "ì": "i",
+        "î": "i",
+        "ï": "i",
+        "ó": "o",
+        "ò": "o",
+        "õ": "o",
+        "ô": "o",
+        "ö": "o",
+        "ú": "u",
+        "ù": "u",
+        "û": "u",
+        "ü": "u",
+        "ç": "c",
+        "Á": "A",
+        "À": "A",
+        "Ã": "A",
+        "Â": "A",
+        "Ä": "A",
+        "É": "E",
+        "È": "E",
+        "Ê": "E",
+        "Ë": "E",
+        "Í": "I",
+        "Ì": "I",
+        "Î": "I",
+        "Ï": "I",
+        "Ó": "O",
+        "Ò": "O",
+        "Õ": "O",
+        "Ô": "O",
+        "Ö": "O",
+        "Ú": "U",
+        "Ù": "U",
+        "Û": "U",
+        "Ü": "U",
+        "Ç": "C",
+    }
+
+    # Substitui caracteres especiais conforme o dicionário
+    normalized_filename = "".join(substitutions.get(c, c) for c in filename)
+
+    # Remove caracteres não-ASCII
+    ascii_filename = normalized_filename.encode("ASCII", "ignore").decode("ASCII")
+
+    # Substitui espaços por underscores
+    safe_filename = ascii_filename.replace(" ", "_")
+
+    return safe_filename
+
+
 def clear_respostas():
     st.session_state["clear_respostas"] = True
     st.session_state["Q&A_done"] = False
@@ -313,7 +377,8 @@ def main():
                     # Se tiver PDFs na pasta quando inicializar a aplicação, apagá-los
                     for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
                         arquivo.unlink()
-                    with open(PASTA_ARQUIVOS / pdf_file.name, "wb") as f:
+                    savefile_name = normalize_filename(pdf_file.name)
+                    with open(PASTA_ARQUIVOS / f"{savefile_name}", "wb") as f:
                         f.write(pdf_file.read())
 
                     st.session_state["pdf_store"] = pdf_file.getbuffer()
@@ -335,6 +400,7 @@ def main():
                             str(st.session_state["tipo_documento"]).replace(" ", "_")
                         )
                         file_name = st.session_state["file_name"]
+                        file_name = normalize_filename(file_name)
 
                         id_unico = (
                             str(st.session_state["data_processamento"])
@@ -370,7 +436,7 @@ def main():
 
                             # Extração de texto com OCR
                             ocr_text = ""
-                            if (text == "") or (len(text) < 2000):
+                            if (text == "") or (len(text) < 1000):
                                 text = ocr(pdf_file, True)
                                 ocr_text = text
 
@@ -384,7 +450,7 @@ def main():
                             chunks = text_splitter.split_text(text=full_text)
 
                             folder_path = PASTA_VECTORDB
-                            index_store_path = folder_path / file_name
+                            index_store_path = folder_path / f"{file_name}"
                             # index_store_path = pasta_raiz + "/vectordb/" + id_unico
 
                             # Vetorização
@@ -432,9 +498,7 @@ def main():
                             st.session_state["Q&A_downloadable"] = {}
 
                             with st.container(border=True):
-                                grid = st.columns(
-                                    [0.5, 3.8, 4, 1, 4]
-                                )
+                                grid = st.columns([0.5, 3.8, 4, 1, 4])
 
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
@@ -486,9 +550,7 @@ def main():
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
 
-                                    grid = st.columns(
-                                        [0.5, 3.8, 4, 1, 4]
-                                    )
+                                    grid = st.columns([0.5, 3.8, 4, 1, 4])
                                     indice = i + 1
                                     grid[0].markdown(indice)
                                     grid[1].write_stream(
@@ -557,9 +619,7 @@ def main():
 
                         with ph.container():
                             with st.container(border=True):
-                                grid = st.columns(
-                                    [0.5, 3.8, 4, 1, 4]
-                                )
+                                grid = st.columns([0.5, 3.8, 4, 1, 4])
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
                                     grid[1].markdown("**Item**")
@@ -645,9 +705,7 @@ def main():
                                         + st.session_state["tempo_Q&A"]
                                     )
 
-                                    grid = st.columns(
-                                        [0.5, 3.8, 4, 1, 4]
-                                    )
+                                    grid = st.columns([0.5, 3.8, 4, 1, 4])
 
                                     indice = i
                                     grid[0].markdown(indice)
@@ -894,7 +952,7 @@ def main():
 
                                 if botao_avalia:
                                     st.session_state["answer_downloads"] = True
-                                    
+
                                     df_avaliacao = df_avaliacao.drop(
                                         ["flag_saida"], axis=1
                                     )
