@@ -3,4 +3,16 @@ import streamlit
 import os
 import sys
 
-subprocess.run([sys.executable, "-m", "streamlit", "run", r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI\01_Processamento_Padrão.py", "--server.port", "8100", "--server.address", "127.0.0.1"])
+subprocess.run(
+    [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        r"/home/azureuser/poc-fpo/",
+        "--server.port",
+        "8501",
+        "--server.address",
+        "127.0.0.1",
+    ]
+)
