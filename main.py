@@ -13,6 +13,6 @@ subprocess.run(
         "--server.port",
         "8501",
         "--server.address",
-        "127.0.0.1",
+        "51.12.49.102",
     ]
 )
