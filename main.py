@@ -9,10 +9,10 @@ subprocess.run(
         "-m",
         "streamlit",
         "run",
-        r"/home/azureuser/poc-fpo/streamlit_ocr/01_Processamento_Padrão.py",
+        r"C:\Users\alexa\Documents\Github\streamlit_ocr\01_Processamento_Padrão.py",
         "--server.port",
         "8501",
         "--server.address",
-        "51.12.49.102",
+        "127.0.0.1",
     ]
 )
