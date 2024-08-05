@@ -22,25 +22,28 @@ def hide_sidebar():
 def check_password():
     """Returns `True` if the user had a correct password."""
     hide_sidebar()
+    st.title("Login")
 
     def login_form():
         """Form with widgets to collect user information"""
         with st.form("Credentials"):
-            st.text_input("Username", key="username")
+            username = st.text_input("Username", key="username")
             st.text_input("Password", type="password", key="password")
-            st.form_submit_button("Login", on_click=password_entered)
-
-    def password_entered():
-        st.session_state["password_correct"] = True
-
-    # Return True if the username + password is validated.
-    if st.session_state.get("password_correct", True):
-        return True
+            submitted = st.form_submit_button("Login")
+            if submitted:
+                # Verificação se o usuário está dentro do padrão do banco (7 letras)
+                if len(username) == 7:
+                    st.session_state["password_correct"] = True
+                else:
+                    st.session_state["password_correct"] = False
 
     # Show inputs for username + password.
-    st.title("Login")
     login_form()
-    if st.session_state["password_correct"] is False:
+
+    # Return True if the username + password is validated.
+    if st.session_state["password_correct"] is True:
+        return True
+    elif st.session_state["password_correct"] is False:
         st.error("Usuário ou senha incorretos.")
     return False
 
