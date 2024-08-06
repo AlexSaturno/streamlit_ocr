@@ -7,6 +7,9 @@ import streamlit as st
 import string
 import random
 from utils import PASTA_RAIZ
+import shutil
+from datetime import datetime
+
 
 st.set_page_config(
     page_title="FPO - Processamento de documentos",
@@ -24,19 +27,20 @@ st.set_page_config(
 with open("./styles.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+
 def gerar_chave_aleatoria(tamanho=5):
     return "".join(random.choice(string.ascii_lowercase) for _ in range(tamanho))
 
-def formatar_perguntas(texto):
-    perguntas = texto.split("\n")
-    perguntas_formatadas = {}
 
-    for pergunta in perguntas:
-        chave = gerar_chave_aleatoria()
-        perguntas_formatadas[chave] = pergunta.strip()
+def formatar_perguntas(texto):
+    sentences = [
+        sentence.strip() for sentence in texto.split("\n\n") if sentence.strip()
+    ]
+    perguntas_formatadas = {i + 1: sentences[i] for i in range(len(sentences))}
     return perguntas_formatadas
 
-username = "palomar" #os.getenv("HADOOP_USER_NAME")
+
+username = "palomar"
 
 if username in ["max.saito", "palomar", "mdtorre"]:
 
@@ -44,11 +48,17 @@ if username in ["max.saito", "palomar", "mdtorre"]:
     st.subheader("Editor de Perguntas")
 
     tipo_documento = st.radio(
-        "Selecione o tipo de documento:",
-        ("Contrato Social", "Procuração", "Estatuto Social", "Eleição de Diretoria"),
+        "Tipo de documento:",
+        (
+            "Contrato Social",
+            "Procuração PJ",
+            "Estatuto Social",
+            "Eleição de Diretoria",
+            "Procuração PF",
+        ),
         horizontal=True,
     )
-    
+
     file_path = PASTA_RAIZ / "perguntas_sidebar.json"
     with open(file_path, "r", encoding="utf8") as f:
         json_data = json.load(f)
@@ -60,15 +70,19 @@ if username in ["max.saito", "palomar", "mdtorre"]:
     result_box = st.text_area(
         "", value=formatted_output_per, disabled=False, height=350
     )
-
-    perguntas_formatadas = formatar_perguntas(result_box)
-
     st.write("")
 
-    if st.button("Enviar perguntas"):
-        st.session_state["perguntas_editadas"] = perguntas_formatadas
-        st.success("Perguntas editadas com sucesso!")
-
+    if st.button("Sobrescrever Prompt"):
+        perguntas_formatadas = formatar_perguntas(result_box)
+        json_data[tipo_documento] = perguntas_formatadas
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file_path = str(file_path)[:-5] + f"_backup_{timestamp}.json"
+        # Create a backup of the old file
+        shutil.copy(file_path, backup_file_path)
+        # Write JSON data to a file
+        with open(file_path, "w") as file:
+            json.dump(json_data, file, indent=4)
+        st.success("Novo prompt salvo com sucesso!")
 
 else:
     st.error("Edição de perguntas não permitida para este usuário")
