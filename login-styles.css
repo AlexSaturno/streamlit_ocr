@@ -1,0 +1,151 @@
+/* Login Page */
+
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+
+* {
+  font-family: "Montserrat", sans-serif !important;
+  overflow: hidden;
+}
+
+/* Variáveis*/
+:root {
+  --primary-darkest: #00001e;
+  --primary-medium: #00003c;
+  --primary-light: #2a2a5c;
+  --secondary-dark: #c0964d;
+  --secondary-medium: #d4ad68;
+  --secondary-lightest: #e9d6b3;
+  --light-blue: #c4dbe5;
+  --background-support: #f9f9f9;
+  --text-color: #555867;
+  --neutral-light: #d8d8d8;
+  --feedback-warning-lightest: #faf6d3;
+  --feedback-warning-darkest: #736a11;
+  --feedback-success-lightest: #daeddf;
+  --feedback-success-darkest: #225230;
+  --feedback-danger-lightest: #fad1d8;
+  --feedback-danger-darkest: #730c1f;
+  --border-radius: 4px;
+}
+
+button[data-testid="baseButton-secondaryFormSubmit"] {
+  background-color: var(--primary-medium);
+  border-radius: var(--border-radius);
+  color: white;
+  transition: 0.3s ease-in-out;
+
+  &:hover {
+    color: white;
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+  }
+
+  width: 100%;
+}
+
+[data-testid="stAppViewContainer"] {
+  background-image: url(https://www.safra.com.br/data/files/E4/D3/94/B0/34C6D710A7759BC7E03EF9C2/header%20image%20_1_.webp);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position-x: center;
+
+  &::before{
+    background-color: #ffffff7a;
+    content: '';
+    display: block;
+    height: 100%;
+    position: absolute;
+    width: 100%;
+  }
+}
+
+[data-testid="stHeader"] {
+  background-color: transparent !important;
+}
+
+div[data-testid="stForm"] {
+  background-color: rgba(255, 255, 255, 0.921);
+  width: 40vw;
+  align-self: center !important;
+  justify-self: center !important;
+  padding: 32px; /* .gns-space-inset-md */
+  box-shadow: 0 0.5rem 0.5rem #0000002b !important;
+  border-radius: var(--border-radius);
+}
+
+div[data-testid="stTextInput-RootElement"] {
+  border-radius: 0.25rem !important;
+  border-color: #d8d8d8 !important;
+  transition: 0.3s ease-in-out;
+  padding-right: 0 !important;
+}
+
+div[data-baseweb="base-input"] {
+  background-color: white;
+}
+
+[data-baseweb="base-input"]:focus,
+textarea:focus,
+select:focus {
+  border: none !important;
+  outline: none !important;
+}
+
+div[data-baseweb="input"]:focus-within {
+  border-color: var(--primary-medium) !important;
+  box-shadow: 0 8px 8px #0000001e !important;
+}
+
+div[data-testid="stDecoration"] {
+  background-image: none;
+}
+
+img[alt="Running..."] {
+  visibility: hidden !important;
+  display: none !important;
+  height: 0% !important;
+  width: 0% !important;
+}
+
+div[data-testid="stStatusWidget"] div img {
+  visibility: hidden !important;
+  display: none !important;
+  height: 0% !important;
+  width: 0% !important;
+}
+
+#fpo-login{
+    font-size: 24px; /* .gns-font-size-large */
+}
+
+div[data-testid="stMarkdown"] div[data-testid="stMarkdownContainer"] p{
+    height: 6vh;
+    background-image: url(https://www.safra.com.br/lumis-theme/br/com/bancosafra/safranet/theme/safranet/assets/img/logo-safra.svg);
+    background-size: 20vh;
+    background-repeat: no-repeat;
+    background-position-y: center;
+    background-position-x: center;
+    width: 100%;
+}
+
+[data-testid="stToolbar"]{
+    display: none !important;
+    visibility: hidden !important;
+}
+
+button[kind="headerNoPadding"]{
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    div[data-testid="stForm"] {
+        margin-top: 15%;
+        width: 90%;
+    }
+
+    div[data-testid="stMarkdown"] div[data-testid="stMarkdownContainer"] p{
+        background-size: 15vh;
+    }
+}

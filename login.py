@@ -1,6 +1,9 @@
 # https://docs.streamlit.io/knowledge-base/deploy/authentication-without-sso
-import hmac
 import streamlit as st
+
+# Leitura do arquivo css de estilização
+with open("./login-styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 def hide_sidebar():
@@ -22,11 +25,12 @@ def hide_sidebar():
 def check_password():
     """Returns `True` if the user had a correct password."""
     hide_sidebar()
-    st.title("Login")
 
     def login_form():
         """Form with widgets to collect user information"""
         with st.form("Credentials"):
+            st.write("ㅤ")  # espaço em branco para logo
+            st.title("FPO — Login")
             username = st.text_input("Username", key="username")
             st.text_input("Password", type="password", key="password")
             submitted = st.form_submit_button("Login")

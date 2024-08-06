@@ -1,0 +1,360 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+
+* {
+  font-family: "Montserrat", sans-serif !important;
+}
+
+/* Variáveis*/
+:root {
+  --primary-darkest: #00001e;
+  --primary-medium: #00003c;
+  --primary-light: #2a2a5c;
+  --secondary-dark: #c0964d;
+  --secondary-medium: #d4ad68;
+  --secondary-lightest: #e9d6b3;
+  --light-blue: #c4dbe5;
+  --background-support: #f9f9f9;
+  --text-color: #555867;
+  --neutral-light: #d8d8d8;
+  --feedback-warning-lightest: #faf6d3;
+  --feedback-warning-darkest: #736a11;
+  --feedback-success-lightest: #daeddf;
+  --feedback-success-darkest: #225230;
+  --feedback-danger-lightest: #fad1d8;
+  --feedback-danger-darkest: #730c1f;
+  --border-radius: 4px;
+}
+
+button[data-testid="baseButton-secondary"] {
+  background-color: var(--primary-medium);
+  border-radius: var(--border-radius);
+  color: white;
+  transition: 0.3s ease-in-out;
+
+  &:hover {
+    color: white;
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+  }
+}
+
+button[data-testid="baseButton-secondaryFormSubmit"] {
+  background-color: var(--primary-medium);
+  border-radius: var(--border-radius);
+  color: white;
+  transition: 0.3s ease-in-out;
+
+  &:hover {
+    color: white;
+    background-color: var(--primary-light);
+    border-color: var(--primary-light);
+  }
+}
+
+button[data-testid="baseButton-secondary"]:focus {
+  background-color: var(--primary-medium);
+  border-color: var(--primary-medium) !important;
+  color: white !important;
+}
+
+div[data-testid="stFileUploaderDropzoneInstructions"] svg {
+  fill: var(--primary-light);
+  transition: 0.3s ease-in-out;
+
+  &:hover {
+    fill: var(--primary-darkest);
+  }
+}
+
+div[data-testid="stSidebarContent"] {
+  background-color: var(--background-support);
+}
+
+div[data-testid="stSidebarNavLink"] {
+  &:hover {
+    background-color: var(--light-blue);
+    color: var(--primary-medium);
+  }
+}
+
+.st-emotion-cache-94ux81 {
+  background-color: var(--light-blue);
+  color: var(--primary-medium);
+  font-weight: 500;
+  color: var(--text-color);
+  border-radius: var(--border-radius);
+
+  &:hover {
+    background-color: var(--light-blue);
+    color: var(--primary-medium);
+    font-weight: 500;
+  }
+}
+
+div[data-testid="stSidebarCollapseButton"] button {
+  background-color: transparent;
+  border-radius: var(--border-radius);
+
+  svg {
+    fill: var(--primary-medium);
+  }
+
+  &:hover {
+    transition: 0.3s ease-in-out;
+    background-color: var(--light-blue);
+  }
+}
+
+div[data-testid="collapsedControl"] button {
+  background-color: transparent;
+  border-radius: var(--border-radius);
+  transition: 0.3s ease-in-out;
+
+  svg {
+    fill: var(--primary-medium);
+  }
+
+  &:hover {
+    background-color: var(--light-blue);
+  }
+}
+
+div[data-testid="stExpander"] details {
+  border-radius: var(--border-radius);
+  border-color: var(--neutral-light);
+  transition: 0.3s ease-in-out;
+
+  &:hover {
+    box-shadow: 0 0.5rem 0.5rem #00000005 !important;
+  }
+
+  p {
+    transition: 0.2s ease-in-out;
+  }
+}
+
+div[data-testid="stExpander"]:hover {
+  summary {
+    color: var(--primary-dark) !important;
+
+    p {
+      font-weight: 490 !important;
+    }
+  }
+
+  svg[data-testid="stExpanderToggleIcon"] {
+    fill: var(--primary-darkest);
+  }
+}
+
+section[data-testid="stFileUploaderDropzone"] {
+  background-color: var(--background-support);
+}
+
+img[alt="Running..."] {
+  visibility: hidden !important;
+  display: none !important;
+  height: 0% !important;
+  width: 0% !important;
+}
+
+div[data-testid="stStatusWidget"] div img {
+  visibility: hidden !important;
+  display: none !important;
+  height: 0% !important;
+  width: 0% !important;
+}
+
+div[data-testid="stSelectbox"] {
+  display: none;
+  visibility: hidden;
+  height: 0%;
+}
+
+div[data-testid="edit-theme"] {
+  display: none;
+  visibility: hidden;
+  height: 0%;
+}
+
+div[data-testid="stMarkdownContainer"] {
+  display: grid !important;
+}
+
+div[data-testid="stSidebarUserContent"]
+  div[data-testid="stVerticalBlockBorderWrapper"] {
+  display: flex;
+  align-items: end;
+}
+
+div[data-testid="stMarkdownContainer"] img {
+  max-width: 130px;
+  width: 100%;
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.container-logo {
+  display: flex;
+  width: 200px;
+  align-items: center;
+  height: 61vh;
+  justify-content: center;
+  align-self: flex-end !important;
+}
+
+div[data-testid="stSidebarNavSeparator"] {
+  border-color: transparent;
+}
+
+div[data-testid="stDeployButton"] button {
+  &:hover {
+    background-color: var(--light-blue);
+    color: var(--primary-medium);
+    color: var(--text-color);
+    border-radius: var(--border-radius);
+  }
+}
+
+button[data-testid="baseButton-headerNoPadding"] {
+  &:hover {
+    background-color: var(--light-blue);
+    color: var(--primary-medium);
+    font-weight: 600 !important;
+    color: var(--text-color);
+    border-radius: var(--border-radius);
+  }
+}
+
+ul[data-testid="main-menu-list"] {
+  border-radius: var(--border-radius);
+  box-shadow: 0 0.5rem 0.5rem #0000001d !important;
+}
+
+div[data-testid="stMainMenuPopover"] {
+  box-shadow: none !important;
+}
+
+ul[role="option"]:hover li {
+  background-color: var(--light-blue);
+}
+
+div[data-testid="stModal"] label input[type="checkbox"]:checked {
+  background-color: var(--primary-medium);
+}
+
+div[role="dialog"] {
+  border-radius: var(--border-radius);
+}
+
+button[data-testid="baseButton-minimal"]:hover {
+  color: var(--primary-medium);
+  font-weight: 500;
+}
+
+a:visited {
+  color: var(--primary-medium);
+  font-weight: 500;
+}
+
+.ModalBody span button:hover {
+  color: var(--primary-medium);
+  font-weight: 500;
+}
+
+.stAlert div[data-testid="stNotification"] {
+  background-color: var(--feedback-success-lightest);
+  color: var(--feedback-success-darkest);
+}
+
+.stException div[data-testid="stNotification"] {
+  background-color: var(--feedback-danger-lightest);
+  color: var(--feedback-danger-darkest);
+}
+
+.stFileUploaderFile {
+  &:hover {
+    fill: var(--primary-medium);
+  }
+}
+
+.stSpinner > div > i {
+  border-top-color: var(--primary-medium);
+  border-right-color: var(--primary-medium);
+}
+
+div[data-testid="stDecoration"] {
+  background-image: none;
+}
+
+button[data-baseweb="tab"] {
+  color: var(--primary-light);
+
+  p {
+    transition: 0.3s ease-in-out;
+  }
+
+  p:hover {
+    color: var(--primary-darkest);
+    font-weight: 470;
+  }
+}
+
+button[data-baseweb="tab"] {
+  &:hover {
+    color: var(--primary-darkest);
+    font-weight: 470;
+  }
+
+  &:focus {
+    color: var(--primary-darkest);
+    font-weight: 500;
+  }
+}
+
+div[data-baseweb="tab-highlight"] {
+  background-color: var(--primary-medium);
+}
+
+div[data-testid="stTextInput-RootElement"] {
+  border-radius: 0.25rem !important;
+  border-color: #d8d8d8 !important;
+  transition: 0.3s ease-in-out;
+}
+
+div[data-baseweb="base-input"] {
+  background-color: white;
+}
+
+[data-baseweb="base-input"]:focus,
+textarea:focus,
+select:focus {
+  border: none !important;
+  outline: none !important;
+}
+
+div[data-baseweb="input"]:focus-within {
+  border-color: #d8d8d8 !important;
+  box-shadow: 0 8px 8px #0000000c;
+}
+
+div[data-testid="stForm"] {
+  border-radius: var(--border-radius) !important;
+}
+
+label[data-baseweb="radio"] > div:first-child {
+  background-color: var(--primary-medium);
+}
+
+[data-testid="stSidebarHeader"] {
+  background-image: url(https://www.safra.com.br/lumis-theme/br/com/bancosafra/safranet/theme/safranet/assets/img/logo-safra.svg);
+  background-size: 7.5rem;
+  background-repeat: no-repeat;
+  background-position-x: 2rem;
+  background-position-y: center;
+}
+
+[data-testid="stSidebarNavItems"] li:first-child {
+  display: none !important;
+  visibility: none !important;
+}

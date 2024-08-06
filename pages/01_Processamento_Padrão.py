@@ -247,16 +247,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-css = """
-<style>
-    section.main > div {max-width:80rem}
-    p {font-size: 14px;}
-    textarea {font-size: 0.85rem !important;}
-    input {font-size: 0.85rem !important;}
-    .font-stream {font-size: 14px;}
-</style>
-"""
-st.markdown(css, unsafe_allow_html=True)
+# Leitura do arquivo css de estilização
+with open("./styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 def main():
