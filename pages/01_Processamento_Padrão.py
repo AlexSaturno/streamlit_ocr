@@ -530,7 +530,7 @@ def main():
 
                             with st.container(border=True):
                                 grid = st.columns(
-                                    [0.6, 2.8, 4.5, 1.2, 4.5], vertical_alignment="top"
+                                    [0.6, 2.8, 4.5, 1.2, 4.5]
                                 )
 
                                 with st.container(border=True):
@@ -592,8 +592,7 @@ def main():
                                     j = 1
                                     for item, resposta in itens_respostas:
                                         grid = st.columns(
-                                            [0.6, 2.8, 4.5, 1.2, 4.5],
-                                            vertical_alignment="top",
+                                            [0.6, 2.8, 4.5, 1.2, 4.5]
                                         )
                                         indice = str(contador) + "." + str(j)
                                         grid[0].markdown(indice)
@@ -667,7 +666,7 @@ def main():
                         with ph.container():
                             with st.container(border=True):
                                 grid = st.columns(
-                                    [0.6, 2.8, 4.5, 1.2, 4.5], vertical_alignment="top"
+                                    [0.6, 2.8, 4.5, 1.2, 4.5]
                                 )
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
@@ -728,8 +727,7 @@ def main():
                                     j = 1
                                     for item, resposta in itens_respostas:
                                         grid = st.columns(
-                                            [0.6, 2.8, 4.5, 1.2, 4.5],
-                                            vertical_alignment="top",
+                                            [0.6, 2.8, 4.5, 1.2, 4.5]
                                         )
                                         indice = str(i) + "." + str(j)
                                         grid[0].markdown(indice)
@@ -849,7 +847,7 @@ def main():
                         full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
 
                         col1, col2, col3 = st.columns(
-                            [4, 1, 1], vertical_alignment="top"
+                            [4, 1, 1]
                         )
                         with col2:
                             st.write("")
@@ -911,7 +909,6 @@ def main():
 
                                 colA, colB, colC = st.columns(
                                     [2, 3, 1.5],
-                                    vertical_alignment="center",
                                     gap="large",
                                 )
                                 colA.radio(
