@@ -20,6 +20,10 @@ st.set_page_config(
     # }
 )
 
+# Leitura do arquivo css de estilização
+with open("./styles.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 def gerar_chave_aleatoria(tamanho=5):
     return "".join(random.choice(string.ascii_lowercase) for _ in range(tamanho))
 
