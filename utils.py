@@ -3,21 +3,11 @@
 ### ====================================
 from pathlib import Path
 import os
-from langchain_openai import AzureChatOpenAI
 from pdf2image import convert_from_path
 import cv2
 import pytesseract
 import shutil
 import numpy as np
-import re
-from langchain_community.document_loaders.pdf import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai.embeddings import AzureOpenAIEmbeddings
-from langchain_community.vectorstores.faiss import FAISS
-from langchain_openai.chat_models import AzureChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
-from langchain.prompts import PromptTemplate
 import streamlit as st
 from configs import *
 import shutil

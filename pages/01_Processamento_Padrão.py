@@ -529,9 +529,7 @@ def main():
                             contador = 1
 
                             with st.container(border=True):
-                                grid = st.columns(
-                                    [0.6, 2.8, 4.5, 1.2, 4.5]
-                                )
+                                grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
 
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
@@ -557,6 +555,7 @@ def main():
                                         response = chain.run(
                                             input_documents=docs, question=query
                                         )
+                                    full_response = response
                                     response = response.replace(
                                         "```json\n", ""
                                     ).replace("\n```", "")
@@ -570,6 +569,7 @@ def main():
                                             str(contador): {
                                                 "pergunta": pergunta,
                                                 "resposta_ia": response,
+                                                "resposta_ia_completa": full_response,
                                                 "tokens_completion": cb.completion_tokens,
                                                 "tokens_prompt": cb.prompt_tokens,
                                                 "tokens_query_embedding": tokens_query_embedding,
@@ -591,9 +591,7 @@ def main():
                                     ]
                                     j = 1
                                     for item, resposta in itens_respostas:
-                                        grid = st.columns(
-                                            [0.6, 2.8, 4.5, 1.2, 4.5]
-                                        )
+                                        grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(contador) + "." + str(j)
                                         grid[0].markdown(indice)
                                         grid[1].write_stream(stream=get_stream(item))
@@ -621,6 +619,27 @@ def main():
                                         st.session_state["tempo_Q&A"] = tempo_qa
                                     else:
                                         contador += 1
+
+                ### PRINT VISUALIZAÇÃO DAS PERGUNTAS PALOMA
+                itens_respostas = (
+                    []
+                )  # Inicializa uma lista vazia para armazenar os pares pergunta-resposta
+                for i, atributos_pergunta in st.session_state["Q&A"].items():
+                    pergunta_prompt = atributos_pergunta.get(
+                        "pergunta", "Pergunta não encontrada"
+                    )
+                    resposta_llm = atributos_pergunta.get(
+                        "resposta_ia_completa", "Resposta completa não encontrada"
+                    )
+                    itens_respostas.append((pergunta_prompt, resposta_llm))
+
+                j = 1
+                for item, resposta in itens_respostas:
+                    st.write(f"Pergunta {j}: {item}")
+                    st.write(f"R: {resposta}")
+                    st.write("")
+                    j += 1
+                ########################################################
 
                 if st.session_state["clear_respostas"]:
                     ph.empty()
@@ -665,9 +684,7 @@ def main():
 
                         with ph.container():
                             with st.container(border=True):
-                                grid = st.columns(
-                                    [0.6, 2.8, 4.5, 1.2, 4.5]
-                                )
+                                grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                 with st.container(border=True):
                                     grid[0].markdown("**#**")
                                     grid[1].markdown("**Item**")
@@ -684,7 +701,6 @@ def main():
                                     retrieved_docs = atributos_pergunta[
                                         "retrieved_docs"
                                     ]
-
                                     tokens_prompt = atributos_pergunta["tokens_prompt"]
                                     tokens_completion = atributos_pergunta[
                                         "tokens_completion"
@@ -726,9 +742,7 @@ def main():
 
                                     j = 1
                                     for item, resposta in itens_respostas:
-                                        grid = st.columns(
-                                            [0.6, 2.8, 4.5, 1.2, 4.5]
-                                        )
+                                        grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(i) + "." + str(j)
                                         grid[0].markdown(indice)
                                         grid[1].markdown(item)
@@ -846,9 +860,7 @@ def main():
 
                         full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
 
-                        col1, col2, col3 = st.columns(
-                            [4, 1, 1]
-                        )
+                        col1, col2, col3 = st.columns([4, 1, 1])
                         with col2:
                             st.write("")
                             txt_file_download_name = id_unico + ".txt"
