@@ -628,6 +628,8 @@ def main():
                                                     "prompt": query,
                                                 }
                                             )
+                                        print("Total tokens: ", cb.total_tokens)
+                                        print("Total cost: ", cb.total_cost)
 
                                     response = response.replace(
                                         "```json\n", ""
