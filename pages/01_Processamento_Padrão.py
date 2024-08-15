@@ -5,12 +5,14 @@
 ################################################################################################################################
 # Bibliotecas
 ################################################################################################################################
-from langchain.chains.question_answering import load_qa_chain
 from langchain_openai import AzureChatOpenAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
 from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureOpenAIEmbeddings
+from langchain.chains import TransformChain
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import chain
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
 
 from datetime import datetime, timedelta
 import os
@@ -18,7 +20,6 @@ import time
 import json
 import tiktoken
 import streamlit as st
-from PyPDF2 import PdfReader
 import numpy as np
 import pandas as pd
 from unidecode import unidecode
@@ -28,6 +29,9 @@ from time import sleep
 import io
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph
+
+import base64
+import ast
 
 from utils import *
 
@@ -70,48 +74,108 @@ llm = AzureChatOpenAI(
     openai_api_type="azure",
 )
 
-###############################################################################################################
-####################### Parametros de modelagem ###############################################################
-k_similarity = 10  # lang_chain similarity search
 
-# Tente utilizar tamanhos de chunk_sizes = [128, 256, 512, 1024, 2048]
-# https://www.llamaindex.ai/blog/evaluating-the-ideal-chunk-size-for-a-rag-system-using-llamaindex-6207e5d3fec5
-pdf_chunk = 1024
+def contar_tokens(textos, modelo="gpt-4o"):
+    """
+    Conta o número de tokens em uma lista de textos ou em um único texto.
 
-# https://learn.microsoft.com/en-us/answers/questions/1551865/how-do-you-set-document-chunk-length-and-overlap-w
-# Recomendado 10%
-pdf_overlap = 110
-##############################################################################################################
+    Parâmetros:
+    - textos: lista de strings ou uma string única a ser tokenizada.
+    - modelo: nome do modelo que será usado para tokenização.
+
+    Retorna:
+    - Se textos for uma lista, retorna uma lista com o número de tokens em cada texto.
+    - Se textos for uma string, retorna o número de tokens no texto.
+    """
+    # Carregar o codificador de tokens com base no modelo
+    enc = tiktoken.encoding_for_model(modelo)
+
+    # Se textos for uma string única, converte para uma lista com um único elemento
+    if isinstance(textos, str):
+        textos = [textos]
+
+    # Codificar cada texto em tokens e contar o número de tokens
+    numero_de_tokens = [len(enc.encode(texto)) for texto in textos]
+
+    return numero_de_tokens if len(numero_de_tokens) > 1 else numero_de_tokens[0]
 
 
-# Função OCR
-def ocr(pdf_file, only_text=False):
-    for file_name_relative in PASTA_ARQUIVOS.glob(
-        "*.pdf"
-    ):  ## first get full file name with directores using for loop
-        file_name_absolute = os.path.basename(
-            file_name_relative
-        )  ## Now get the file name with os.path.basename
-    extracted_text = ""
-    contador_de_figuras = 0
-    imgs_path = convert_pdf_to_images(f"{PASTA_ARQUIVOS}/{file_name_absolute}")
-    file_pages = os.listdir(imgs_path)
-    # print(len(file_pages))
-    for file_page in file_pages:
-        image_path = os.path.join(imgs_path, file_page)
-        imagem = cv2.imread(image_path)
-        if imagem is not None:
-            if only_text is True:
-                page_text = detect_text(imagem)
-            else:
-                page_text, contador_de_figuras = detect_figures(
-                    imagem, contador_de_figuras
-                )
-            extracted_text += page_text + "\n"
-        else:
-            print(f"Erro ao carregar a imagem {image_path}")
+# def contar_tokens(texto, modelo="gpt-4o"):
+#     # Carregar o codificador de tokens com base no modelo
+#     enc = tiktoken.encoding_for_model(modelo)
 
-    return extracted_text
+#     # Codificar o texto em tokens
+#     tokens = enc.encode(texto)
+
+#     # Contar o número de tokens
+#     numero_de_tokens = len(tokens)
+
+#     return numero_de_tokens
+
+
+###############################################################################
+# IMAGEM PASTA - VALIDAÇÃO NA PÁGINA DE PERGUNTAS ADICIONAIS
+def load_images(inputs: dict) -> dict:
+    """Load multiple images from files and encode them as base64."""
+    image_paths = inputs["image_paths"]
+
+    def encode_image(image_path):
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+
+    images_base64 = [encode_image(path) for path in image_paths]
+    return {"images": images_base64}
+
+
+load_images_chain = TransformChain(
+    input_variables=["image_paths"], output_variables=["images"], transform=load_images
+)
+
+
+@chain
+def process_prompt(inputs: dict) -> str | list[str] | dict:
+    """Invoke model with prompt and chat history."""
+    # Carrega o histórico de chat da memória
+    memory = st.session_state["memory"]
+
+    chat_history = memory.load_memory_variables({})["chat_history"]
+    print(f"Número de tokens chat_history: {contar_tokens(chat_history)}")
+
+    # Pega o histórico de chat como string
+    # chat_content = chat_history.get("chat_history", "")
+
+    # Concatena o prompt atual com o histórico de chat
+    content = chat_history + f"\n{inputs['prompt']}"
+
+    print(f"Número de tokens final: {contar_tokens(content)}")
+
+    # Faz a chamada ao modelo
+    msg = llm.invoke([HumanMessage(content=content)])
+    print("msg: ", msg)
+
+    return str(msg.content)
+
+
+@chain
+def image_model(
+    inputs: dict,
+) -> str | list[str] | dict:
+    """Invoke model with images and prompt."""
+    image_urls = [
+        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
+        for img in inputs["images"]
+    ]
+
+    content = [{"type": "text", "text": inputs["prompt"]}] + image_urls
+
+    msg = llm.invoke([HumanMessage(content=content)])
+    # print("msg: ", msg)
+    # return {"response": str(msg.content), "images_base64": inputs["images"]}
+    return str(msg.content)
+
+
+chain = load_images_chain | image_model
+###############################################################################
 
 
 # Funcoes auxiliares
@@ -257,6 +321,8 @@ with open("./styles.css") as f:
 
 # # Inicio da aplicação
 def main():
+    if "memory" not in st.session_state:
+        st.session_state.memory = ConversationBufferMemory(memory_key="chat_history")
 
     if "selecionadas" not in st.session_state:
         st.session_state["selecionadas"] = None
@@ -435,7 +501,7 @@ def main():
                     with open(pdf_store_full_path, "wb") as file:
                         file.write(st.session_state["pdf_store"])
 
-                    vectordb_store_folder = str(PASTA_VECTORDB) + id_unico
+                    vectordb_store_folder = f"{str(PASTA_VECTORDB)}/{id_unico}"
                     if not os.path.exists(vectordb_store_folder):
                         os.makedirs(vectordb_store_folder)
 
@@ -445,56 +511,54 @@ def main():
                         # if vetoriza:
                         st.session_state["tempo_ia"] = 0
                         start_time = time.time()
-                        with st.spinner("Vetorizando documento..."):
-                            # Extração de imagens do PDF
-                            ocr_images_text = ""
-                            ocr_images_text = ocr(pdf_file)
+                        memory = st.session_state["memory"]
 
-                            pdf_reader = PdfReader(pdf_file)
+                        with st.spinner("Processando documento..."):
+                            memory.chat_memory.clear()
 
-                            text = ""
-                            for page in pdf_reader.pages:
-                                text += page.extract_text()
+                            # Converter PDF para imagens
+                            convert_pdf_to_images(pdf_store_full_path)
 
-                            # Extração de texto com OCR
-                            ocr_text = ""
-                            if (text == "") or (len(text) < 1000):
-                                text = ocr(pdf_file, True)
-                                ocr_text = text
+                            # id_unico = st.session_state["id_unico"]
+                            # path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
+                            # quantidade_paginas = len(os.listdir(path_atual))
 
-                            text_splitter = RecursiveCharacterTextSplitter(
-                                chunk_size=pdf_chunk,
-                                chunk_overlap=pdf_overlap,
-                                length_function=len,
-                            )
+                            # with get_openai_callback() as cb:
+                            #     response = chain.invoke(
+                            #         {
+                            #             "image_paths": [
+                            #                 f"{path_atual}/page{n}.jpg"
+                            #                 for n in range(0, quantidade_paginas)
+                            #             ],
+                            #             "prompt": "",
+                            #         }
+                            #     )
 
-                            full_text = ocr_images_text + text + ocr_text
-                            chunks = text_splitter.split_text(text=full_text)
+                            # images_base64 = response["images_base64"]
+                            # print(
+                            #     f"Número de tokens image: {contar_tokens(images_base64)}"
+                            # )
 
-                            try:
-                                VectorStore = FAISS.from_texts(
-                                    chunks, embedding=embeddings
-                                )
-                                VectorStore.save_local(vectordb_store_folder)
-                                tokens_doc_embedding = num_tokens_from_string(
-                                    " ".join(chunks), "cl100k_base"
-                                )
-                                st.session_state["tokens_doc_embedding"] = (
-                                    tokens_doc_embedding
-                                )
-                                st.session_state["vectordb"] = VectorStore
-                                st.session_state["status_vetorizacao"] = True
-                                end_time = time.time()
-                                tempo_vetorizacao = end_time - start_time
-                                st.session_state["tempo_vetorizacao"] = (
-                                    tempo_vetorizacao
-                                )
-                                st.session_state["tempo_ia"] = 0
+                            # output_prompt = "Utilizarei o contexto para responder as perguntas a seguir"
+                            # # Salve o contexto no `memory`, focando no input
+                            # memory.save_context(
+                            #     {"text": response["images_base64"]},
+                            #     {"response": [output_prompt]},
+                            # )
+                            # st.session_state["memory"] = memory
 
-                            except Exception as e:
-                                st.warning(
-                                    "Arquivo contém imagem !! Deve ser processado com OCR! Favor subir outro arquivo!"
-                                )
+                            # chat_history = memory.load_memory_variables({})[
+                            #     "chat_history"
+                            # ]
+                            # print(
+                            #     f"Número de tokens chat_history antes das perguntas: {contar_tokens(chat_history)}"
+                            # )
+
+                            st.session_state["status_vetorizacao"] = True
+                            end_time = time.time()
+                            tempo_vetorizacao = end_time - start_time
+                            st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
+                            st.session_state["tempo_ia"] = 0
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
@@ -543,19 +607,28 @@ def main():
                                         pergunta, "cl100k_base"
                                     )
 
-                                    additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The json keys are: {json_keys[i]}. The values must be a single string. If mulitple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON MUST conform to the XML format, including any types and format requests e.g. requests for lists, objects and specific types. Do not wrap the json codes in JSON md markers. Do not wrap the json codes in JSON md markers. Do not wrap the json codes in JSON md markers."""
+                                    additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The json keys are: {json_keys[i]}. The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
                                     query = pergunta + additional_instructions_general
-                                    VectorStore = st.session_state["vectordb"]
-                                    docs = VectorStore.similarity_search(
-                                        query=query, k=k_similarity
-                                    )
 
-                                    chain = load_qa_chain(llm=llm, chain_type="stuff")
                                     with get_openai_callback() as cb:
-                                        response = chain.run(
-                                            input_documents=docs, question=query
+                                        id_unico = st.session_state["id_unico"]
+                                        path_atual = (
+                                            f"{PASTA_IMAGENS}/{id_unico}_images"
                                         )
-                                    full_response = response
+                                        quantidade_paginas = len(os.listdir(path_atual))
+                                        with get_openai_callback() as cb:
+                                            response = chain.invoke(
+                                                {
+                                                    "image_paths": [
+                                                        f"{path_atual}/page{n}.jpg"
+                                                        for n in range(
+                                                            0, quantidade_paginas
+                                                        )
+                                                    ],
+                                                    "prompt": query,
+                                                }
+                                            )
+
                                     response = response.replace(
                                         "```json\n", ""
                                     ).replace("\n```", "")
@@ -564,16 +637,16 @@ def main():
                                     except:
                                         pass
 
+                                    print("Response: ", response)
+
                                     st.session_state["Q&A"].update(
                                         {
                                             str(contador): {
                                                 "pergunta": pergunta,
                                                 "resposta_ia": response,
-                                                "resposta_ia_completa": full_response,
                                                 "tokens_completion": cb.completion_tokens,
                                                 "tokens_prompt": cb.prompt_tokens,
                                                 "tokens_query_embedding": tokens_query_embedding,
-                                                "retrieved_docs": str(docs),
                                             }
                                         }
                                     )
@@ -584,13 +657,14 @@ def main():
 
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
-
+                                    print("Resposta LLM: ", resposta_llm)
                                     itens_respostas = [
                                         (item, resposta)
                                         for item, resposta in resposta_llm.items()
                                     ]
                                     j = 1
                                     for item, resposta in itens_respostas:
+                                        st.markdown(f"**{pergunta_prompt}**")
                                         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(contador) + "." + str(j)
                                         grid[0].markdown(indice)
@@ -620,27 +694,6 @@ def main():
                                     else:
                                         contador += 1
 
-                ### PRINT VISUALIZAÇÃO DAS PERGUNTAS PALOMA
-                itens_respostas = (
-                    []
-                )  # Inicializa uma lista vazia para armazenar os pares pergunta-resposta
-                for i, atributos_pergunta in st.session_state["Q&A"].items():
-                    pergunta_prompt = atributos_pergunta.get(
-                        "pergunta", "Pergunta não encontrada"
-                    )
-                    resposta_llm = atributos_pergunta.get(
-                        "resposta_ia_completa", "Resposta completa não encontrada"
-                    )
-                    itens_respostas.append((pergunta_prompt, resposta_llm))
-
-                j = 1
-                for item, resposta in itens_respostas:
-                    st.write(f"Pergunta {j}: {item}")
-                    st.write(f"R: {resposta}")
-                    st.write("")
-                    j += 1
-                ########################################################
-
                 if st.session_state["clear_respostas"]:
                     ph.empty()
                     sleep(0.01)
@@ -661,7 +714,6 @@ def main():
                                 "#",
                                 "item",
                                 "resposta_ia",
-                                "retrieved_docs",
                                 "tokens_prompt",
                                 "tokens_completion",
                                 "tokens_doc_embedding",
@@ -698,9 +750,6 @@ def main():
 
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
-                                    retrieved_docs = atributos_pergunta[
-                                        "retrieved_docs"
-                                    ]
                                     tokens_prompt = atributos_pergunta["tokens_prompt"]
                                     tokens_completion = atributos_pergunta[
                                         "tokens_completion"
@@ -787,7 +836,6 @@ def main():
                                             indice,
                                             item,
                                             resposta,
-                                            retrieved_docs,
                                             tokens_prompt,
                                             tokens_completion,
                                             tokens_doc_embedding,
@@ -821,7 +869,7 @@ def main():
                         ].apply(lambda x: "P" + str(x + 1))
 
                         # Formatando as respostas para saída IMG
-                        formatted_output_sistema = ""
+                        formatted_output_IMG = ""
                         formatted_output_IMG = "<b>SISTEMA IMG</b><br/><br/><br/>"
                         formatted_output_IMG += f"<b>Nome do Arquivo:</b> {st.session_state['file_name']}.pdf<br/>"
                         formatted_output_IMG += f"<b>Tipo de Documento:</b> {st.session_state['tipo_documento']} <br/>"
@@ -831,6 +879,7 @@ def main():
                             f"<b>PERGUNTAS E RESPOSTAS</b><br/><br/>"
                         )
 
+                        formatted_output_FPO = ""
                         formatted_output_FPO = df_avaliacao[["item", "saida_FPO"]].T
                         formatted_output_FPO = formatted_output_FPO.to_csv(
                             sep=";", index=False, header=False, lineterminator="\n"
@@ -1126,21 +1175,23 @@ def main():
                     )
 
                     if submit_button:
-                        VectorStore = st.session_state["vectordb"]
-                        docs = VectorStore.similarity_search(
-                            query=query_add, k=k_similarity
-                        )
-                        st.session_state["doc_retrieval"] = docs
-                        chain = load_qa_chain(llm=llm, chain_type="stuff")
-
-                        with get_openai_callback() as cb:
-                            response = chain.run(
-                                input_documents=docs,
-                                question=query_add
-                                + ".\n\nAnswer in a very objective way. Explanations are not required.\nFor multiple information return 1 item per line, adding line breaks in between preceeded by 2 blank spaces.\nThe reply must be always in Portuguese from Brazil.",
-                            )
-                        with st.empty():
-                            st.markdown(f"**{query_add}**" + "  \n " + response)
+                        with st.spinner("Processando pergunta adicional"):
+                            with get_openai_callback() as cb:
+                                id_unico = st.session_state["id_unico"]
+                                path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
+                                quantidade_paginas = len(os.listdir(path_atual))
+                                with get_openai_callback() as cb:
+                                    response = chain.invoke(
+                                        {
+                                            "image_paths": [
+                                                f"{path_atual}/page{n}.jpg"
+                                                for n in range(0, quantidade_paginas)
+                                            ],
+                                            "prompt": query_add,
+                                        }
+                                    )
+                            with st.empty():
+                                st.markdown(f"**{query_add}**" + "  \n " + response)
 
             else:
                 st.write("Documento não vetorizado!")

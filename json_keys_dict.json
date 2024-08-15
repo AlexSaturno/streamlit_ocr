@@ -49,7 +49,7 @@
     ],
     "Procura\u00e7\u00e3o PF": [
         "nome_outorgante, cpf_outorgante",
-        "número_livro, número_folhas",
+        "numero_livro, numero_folhas",
         "assinante_digital",
         "data_procuracao",
         "validade",
