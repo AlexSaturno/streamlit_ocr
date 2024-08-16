@@ -793,6 +793,7 @@ def main():
 
                                     j = 1
                                     for item, resposta in itens_respostas:
+                                        st.markdown(f"**{pergunta_prompt}**")
                                         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(i) + "." + str(j)
                                         grid[0].markdown(indice)
