@@ -310,83 +310,94 @@ def main():
     # ----------------------------------------------------------------------------------------------
     with tab1:
         with st.container(border=True):
-            st.session_state["tipo_documento"] = st.radio(
-                "",
-                [
-                    "Contrato Social",
-                    "Procuração PJ",
-                    "Estatuto Social",
-                    "Eleição de Diretoria",
-                    "Procuração PF",
-                ],
-                horizontal=True,
-                index=None,
-                on_change=clear_respostas,
-                label_visibility="collapsed",
+            pdf_file = st.file_uploader(
+                "Carregamento de arquivo",
+                type=["pdf"],
+                key="pdf_file",
+                on_change=zera_vetorizacao,
             )
-            st.write("")
-            if st.session_state["tipo_documento"] is not None:
-                pdf_file = st.file_uploader(
-                    "Carregamento de arquivo",
-                    type=["pdf"],
-                    key="pdf_file",
-                    on_change=zera_vetorizacao,
+
+            if pdf_file is not None and not st.session_state["status_vetorizacao"]:
+                # Se tiver PDFs na pasta quando inicializar a aplicação, apagá-los
+                for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
+                    arquivo.unlink()
+                savefile_name = normalize_filename(pdf_file.name)
+                with open(PASTA_ARQUIVOS / f"{savefile_name}", "wb") as f:
+                    f.write(pdf_file.read())
+
+                st.session_state["pdf_store"] = pdf_file.getbuffer()
+                st.session_state["file_name"] = pdf_file.name[:-4]
+
+                data_processamento = datetime.now().strftime("%Y-%m-%d")
+                hora_processamento = (datetime.now() - timedelta(hours=3)).strftime(
+                    "%H:%M"
                 )
+                st.session_state["data_processamento"] = data_processamento
+                st.session_state["hora_processamento"] = hora_processamento
+                tipo = unidecode(
+                    str(st.session_state["tipo_documento"]).replace(" ", "_")
+                )
+                file_name = st.session_state["file_name"]
 
-                if pdf_file is not None and not st.session_state["status_vetorizacao"]:
-                    # Se tiver PDFs na pasta quando inicializar a aplicação, apagá-los
-                    for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
-                        arquivo.unlink()
-                    savefile_name = normalize_filename(pdf_file.name)
-                    with open(PASTA_ARQUIVOS / f"{savefile_name}", "wb") as f:
-                        f.write(pdf_file.read())
+                id_unico = (
+                    str(st.session_state["data_processamento"])
+                    + "_"
+                    + str(st.session_state["hora_processamento"]).replace(":", "-")
+                    + "_"
+                    + unidecode(str(st.session_state["file_name"]).lower())
+                )
+                st.session_state["id_unico"] = id_unico
 
-                    st.session_state["pdf_store"] = pdf_file.getbuffer()
-                    st.session_state["file_name"] = pdf_file.name[:-4]
+                pdf_store_full_path = f"{str(PASTA_ARQUIVOS)}/{id_unico}" + ".pdf"
+                pdf_store_full_path = str(PASTA_ARQUIVOS) + "/" + id_unico + ".pdf"
 
-                    data_processamento = datetime.now().strftime("%Y-%m-%d")
-                    hora_processamento = (datetime.now() - timedelta(hours=3)).strftime(
-                        "%H:%M"
-                    )
-                    st.session_state["data_processamento"] = data_processamento
-                    st.session_state["hora_processamento"] = hora_processamento
-                    tipo = unidecode(
-                        str(st.session_state["tipo_documento"]).replace(" ", "_")
-                    )
-                    file_name = st.session_state["file_name"]
+                with open(pdf_store_full_path, "wb") as file:
+                    file.write(st.session_state["pdf_store"])
 
-                    id_unico = (
-                        str(st.session_state["data_processamento"])
-                        + "_"
-                        + str(st.session_state["hora_processamento"]).replace(":", "-")
-                        + "_"
-                        + unidecode(str(st.session_state["file_name"]).lower())
-                    )
-                    st.session_state["id_unico"] = id_unico
+                vectordb_store_folder = f"{str(PASTA_VECTORDB)}/{id_unico}"
+                if not os.path.exists(vectordb_store_folder):
+                    os.makedirs(vectordb_store_folder)
 
-                    pdf_store_full_path = f"{str(PASTA_ARQUIVOS)}/{id_unico}" + ".pdf"
-                    pdf_store_full_path = str(PASTA_ARQUIVOS) + "/" + id_unico + ".pdf"
+                if not st.session_state["status_vetorizacao"]:
+                    st.session_state["tempo_ia"] = 0
+                    start_time = time.time()
 
-                    with open(pdf_store_full_path, "wb") as file:
-                        file.write(st.session_state["pdf_store"])
+                    with st.spinner("Processando documento..."):
+                        # Converter PDF para imagens
+                        convert_pdf_to_images(pdf_store_full_path)
+                        st.session_state["status_vetorizacao"] = True
 
-                    vectordb_store_folder = f"{str(PASTA_VECTORDB)}/{id_unico}"
-                    if not os.path.exists(vectordb_store_folder):
-                        os.makedirs(vectordb_store_folder)
+                        # Identificar tipos de documentos:
+                        with get_openai_callback() as cb:
+                            id_unico = st.session_state["id_unico"]
+                            path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
+                            quantidade_paginas = len(os.listdir(path_atual))
+                            with get_openai_callback() as cb:
+                                response_tipo = chain.invoke(
+                                    {
+                                        "image_paths": [
+                                            f"{path_atual}/page{n}.jpg"
+                                            for n in range(0, quantidade_paginas)
+                                        ],
+                                        "prompt": """
+                                        Qual é o tipo do documento?
 
-                    if not st.session_state["status_vetorizacao"]:
+                                        Seja conciso. A resposta deve ser somente uma string.
+                                        A string deve estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+
+                                        Alguns documentos podem ter mais de um tipo, nesse caso, retorne uma lista com os tipos.
+                                        Os tipos da lista devem estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                        """,
+                                    }
+                                )
+
+                        end_time = time.time()
+                        tempo_vetorizacao = end_time - start_time
+                        st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
-                        start_time = time.time()
 
-                        with st.spinner("Processando documento..."):
-
-                            # Converter PDF para imagens
-                            convert_pdf_to_images(pdf_store_full_path)
-                            st.session_state["status_vetorizacao"] = True
-                            end_time = time.time()
-                            tempo_vetorizacao = end_time - start_time
-                            st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
-                            st.session_state["tempo_ia"] = 0
+                        print("Tipo de documento: ", response_tipo)
+                        st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
@@ -577,7 +588,6 @@ def main():
                                 for i, atributos_pergunta in st.session_state[
                                     "Q&A"
                                 ].items():
-
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
                                     tokens_prompt = atributos_pergunta["tokens_prompt"]
