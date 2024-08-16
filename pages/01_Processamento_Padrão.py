@@ -7,12 +7,9 @@
 ################################################################################################################################
 from langchain_openai import AzureChatOpenAI
 from langchain_community.callbacks import get_openai_callback
-from langchain_openai import AzureOpenAIEmbeddings
 from langchain.chains import TransformChain
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import chain
-from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
 
 from datetime import datetime, timedelta
 import os
@@ -23,7 +20,6 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from unidecode import unidecode
-import unicodedata
 from time import sleep
 
 import io
@@ -31,7 +27,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 
 import base64
-import ast
 
 from utils import *
 
@@ -41,29 +36,6 @@ from utils import *
 
 # Parametros das APIS
 # arquivo de secrets
-
-## Melhor modelo de embedding da OPENAI, veja documentação comparando métrica
-# contra o ADA
-OPENAI_ADA_EMBEDDING_DEPLOYMENT_NAME = "text-embedding-3-large"
-OPENAI_ADA_EMBEDDING_MODEL_NAME = "text-embedding-3-large"
-OPENAI_ADA_DEPLOYMENT_ENDPOINT = (st.secrets["AZURE_OPENAI_ENDPOINT"],)
-OPENAI_ADA_API_KEY = (st.secrets["AZURE_OPENAI_API_KEY"],)
-
-embeddings = AzureOpenAIEmbeddings(
-    azure_deployment=OPENAI_ADA_EMBEDDING_DEPLOYMENT_NAME,
-    model=OPENAI_ADA_EMBEDDING_MODEL_NAME,
-    openai_api_type="azure",
-    chunk_size=1,
-    api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
-    azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
-    api_key=st.secrets["AZURE_OPENAI_API_KEY"],
-)
-
-embeddings_ocr = AzureOpenAIEmbeddings(
-    api_version=st.secrets["AZURE_OPENAI_API_VERSION"],
-    azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
-    api_key=st.secrets["AZURE_OPENAI_API_KEY"],
-)
 
 llm = AzureChatOpenAI(
     azure_deployment=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
@@ -75,46 +47,8 @@ llm = AzureChatOpenAI(
 )
 
 
-def contar_tokens(textos, modelo="gpt-4o"):
-    """
-    Conta o número de tokens em uma lista de textos ou em um único texto.
-
-    Parâmetros:
-    - textos: lista de strings ou uma string única a ser tokenizada.
-    - modelo: nome do modelo que será usado para tokenização.
-
-    Retorna:
-    - Se textos for uma lista, retorna uma lista com o número de tokens em cada texto.
-    - Se textos for uma string, retorna o número de tokens no texto.
-    """
-    # Carregar o codificador de tokens com base no modelo
-    enc = tiktoken.encoding_for_model(modelo)
-
-    # Se textos for uma string única, converte para uma lista com um único elemento
-    if isinstance(textos, str):
-        textos = [textos]
-
-    # Codificar cada texto em tokens e contar o número de tokens
-    numero_de_tokens = [len(enc.encode(texto)) for texto in textos]
-
-    return numero_de_tokens if len(numero_de_tokens) > 1 else numero_de_tokens[0]
-
-
-# def contar_tokens(texto, modelo="gpt-4o"):
-#     # Carregar o codificador de tokens com base no modelo
-#     enc = tiktoken.encoding_for_model(modelo)
-
-#     # Codificar o texto em tokens
-#     tokens = enc.encode(texto)
-
-#     # Contar o número de tokens
-#     numero_de_tokens = len(tokens)
-
-#     return numero_de_tokens
-
-
 ###############################################################################
-# IMAGEM PASTA - VALIDAÇÃO NA PÁGINA DE PERGUNTAS ADICIONAIS
+# Conversão de imagens para base64 para enviar para o modelo
 def load_images(inputs: dict) -> dict:
     """Load multiple images from files and encode them as base64."""
     image_paths = inputs["image_paths"]
@@ -130,30 +64,6 @@ def load_images(inputs: dict) -> dict:
 load_images_chain = TransformChain(
     input_variables=["image_paths"], output_variables=["images"], transform=load_images
 )
-
-
-@chain
-def process_prompt(inputs: dict) -> str | list[str] | dict:
-    """Invoke model with prompt and chat history."""
-    # Carrega o histórico de chat da memória
-    memory = st.session_state["memory"]
-
-    chat_history = memory.load_memory_variables({})["chat_history"]
-    print(f"Número de tokens chat_history: {contar_tokens(chat_history)}")
-
-    # Pega o histórico de chat como string
-    # chat_content = chat_history.get("chat_history", "")
-
-    # Concatena o prompt atual com o histórico de chat
-    content = chat_history + f"\n{inputs['prompt']}"
-
-    print(f"Número de tokens final: {contar_tokens(content)}")
-
-    # Faz a chamada ao modelo
-    msg = llm.invoke([HumanMessage(content=content)])
-    print("msg: ", msg)
-
-    return str(msg.content)
 
 
 @chain
@@ -299,7 +209,7 @@ def initialize_session_state():
 # UX
 ################################################################################################################################
 
-# # Inicio da aplicação
+# Inicio da aplicação
 initialize_session_state()
 
 st.set_page_config(
@@ -319,11 +229,8 @@ with open("./styles.css") as f:
 ################################################################################################################################
 
 
-# # Inicio da aplicação
+# Inicio da aplicação
 def main():
-    if "memory" not in st.session_state:
-        st.session_state.memory = ConversationBufferMemory(memory_key="chat_history")
-
     if "selecionadas" not in st.session_state:
         st.session_state["selecionadas"] = None
 
@@ -389,44 +296,6 @@ def main():
 
     if "id_unico" not in st.session_state:
         st.session_state["id_unico"] = True
-
-    def clear_respostas():
-        st.session_state["clear_respostas"] = True
-        st.session_state["Q&A_done"] = False
-        st.session_state["Q&A"] = {}
-        st.session_state["data_processamento"] = None
-        st.session_state["hora_processamento"] = None
-        st.session_state["tempo_ia"] = None
-
-    def num_tokens_from_string(string: str, encoding_name: str) -> int:
-        """Returns the number of tokens in a text string."""
-        encoding = tiktoken.get_encoding(encoding_name)
-        num_tokens = len(encoding.encode(string))
-        return num_tokens
-
-    def zera_vetorizacao():
-        st.session_state["vectordb_object"] = None
-        st.session_state["status_vetorizacao"] = False
-        st.session_state["clear_respostas"] = True
-        st.session_state["Q&A_done"] = False
-        st.session_state["Q&A"] = {}
-        st.session_state["data_processamento"] = None
-        st.session_state["hora_processamento"] = None
-        st.session_state["tempo_ia"] = None
-
-    def write_stream(stream):
-        result = ""
-        container = st.empty()
-        for chunk in stream:
-            result += chunk
-            container.markdown(
-                f'<p class="font-stream">{result}</p>', unsafe_allow_html=True
-            )
-
-    def get_stream(texto):
-        for word in texto.split(" "):
-            yield word + " "
-            time.sleep(0.01)
 
     username = "max.saito"
     id = np.random.rand()
@@ -506,54 +375,13 @@ def main():
                         os.makedirs(vectordb_store_folder)
 
                     if not st.session_state["status_vetorizacao"]:
-                        # vetoriza = st.button('Vetorizar')
-
-                        # if vetoriza:
                         st.session_state["tempo_ia"] = 0
                         start_time = time.time()
-                        memory = st.session_state["memory"]
 
                         with st.spinner("Processando documento..."):
-                            memory.chat_memory.clear()
 
                             # Converter PDF para imagens
                             convert_pdf_to_images(pdf_store_full_path)
-
-                            # id_unico = st.session_state["id_unico"]
-                            # path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
-                            # quantidade_paginas = len(os.listdir(path_atual))
-
-                            # with get_openai_callback() as cb:
-                            #     response = chain.invoke(
-                            #         {
-                            #             "image_paths": [
-                            #                 f"{path_atual}/page{n}.jpg"
-                            #                 for n in range(0, quantidade_paginas)
-                            #             ],
-                            #             "prompt": "",
-                            #         }
-                            #     )
-
-                            # images_base64 = response["images_base64"]
-                            # print(
-                            #     f"Número de tokens image: {contar_tokens(images_base64)}"
-                            # )
-
-                            # output_prompt = "Utilizarei o contexto para responder as perguntas a seguir"
-                            # # Salve o contexto no `memory`, focando no input
-                            # memory.save_context(
-                            #     {"text": response["images_base64"]},
-                            #     {"response": [output_prompt]},
-                            # )
-                            # st.session_state["memory"] = memory
-
-                            # chat_history = memory.load_memory_variables({})[
-                            #     "chat_history"
-                            # ]
-                            # print(
-                            #     f"Número de tokens chat_history antes das perguntas: {contar_tokens(chat_history)}"
-                            # )
-
                             st.session_state["status_vetorizacao"] = True
                             end_time = time.time()
                             tempo_vetorizacao = end_time - start_time
