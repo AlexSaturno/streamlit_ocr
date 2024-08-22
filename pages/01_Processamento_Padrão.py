@@ -382,13 +382,14 @@ def main():
                                         "prompt": """
                                         Qual é o tipo do documento?
 
-                                        Seja conciso. A resposta deve ser somente uma string.
-                                        A string deve estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                        Seja conciso. A resposta deve ser somente uma string com os tipos de documentos.
+                                        Alguns documentos podem ter mais de um tipo, nesses casos incluir todos na string.
 
-                                        Alguns documentos podem ter mais de um tipo, nesse caso, retorne uma lista com os tipos.
-                                        Os tipos da lista devem estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                        Os tipos da string devem estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
                                         """,
                                     }
+                                    # Seja conciso. A resposta deve ser somente uma string.
+                                    # A string deve estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
                                 )
 
                         end_time = time.time()
@@ -396,7 +397,6 @@ def main():
                         st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
 
-                        print("Tipo de documento: ", response_tipo)
                         st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
@@ -406,15 +406,45 @@ def main():
                     str(PASTA_RAIZ) + "/perguntas_sidebar.json", "r", encoding="utf8"
                 ) as f:
                     perguntas = json.load(f)
-                perguntas_selecionadas = list(
-                    perguntas[st.session_state["tipo_documento"]].values()
-                )
 
+                tipo_documentos = st.session_state["tipo_documento"]
+                print("Tipo de documentos: ", tipo_documentos)
+                if isinstance(tipo_documentos, str):
+                    tipo_documentos = [
+                        doc.strip() for doc in tipo_documentos.split(",")
+                    ]
+
+                # Processa as perguntas de acordo com a quantidade de documentos
+                perguntas_selecionadas = []
+                lista_perguntas = []
+
+                # Itera sobre cada documento e adiciona suas perguntas na lista
+                for tipo_doc in tipo_documentos:
+                    if tipo_doc in perguntas:
+                        perguntas_do_tipo = list(perguntas[tipo_doc].values())
+                        lista_perguntas.extend(perguntas_do_tipo)
+                    else:
+                        print(
+                            f"Tipo de documento {tipo_doc} não encontrado nas perguntas."
+                        )
+
+                perguntas_selecionadas = lista_perguntas
                 st.session_state["selecionadas"] = perguntas_selecionadas
 
                 with open(str(PASTA_RAIZ) + "/json_keys_dict.json", "r") as f:
                     json_keys_dict = json.load(f)
-                json_keys = json_keys_dict[st.session_state["tipo_documento"]]
+
+                # Itera sobre cada documento e adiciona suas perguntas na lista
+                lista_parametros = []
+                for tipo_param in tipo_documentos:
+                    if tipo_param in json_keys_dict:
+                        parametros_dict = list(json_keys_dict[tipo_param])
+                        lista_parametros.extend(parametros_dict)
+                    else:
+                        print(
+                            f"Tipo de parâmetro {tipo_param} não encontrado nas perguntas."
+                        )
+                json_keys = lista_parametros
 
                 llm_call = st.button(
                     f"Processar perguntas padrão para {st.session_state.tipo_documento}"
@@ -441,7 +471,17 @@ def main():
                                     grid[3].markdown("**Avaliação**")
                                     grid[4].markdown("**Saída FPO**")
 
+                                # Inicializa progress_bar
+                                progress_text = f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde..."
+                                progress_bar = st.progress(0, text=progress_text)
+
                                 for i, pergunta in enumerate(perguntas_json):
+                                    progresso = contador / len(perguntas_json)
+                                    progress_bar.progress(
+                                        progresso,
+                                        text=f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde...",
+                                    )
+
                                     tokens_query_embedding = num_tokens_from_string(
                                         pergunta, "cl100k_base"
                                     )
@@ -534,6 +574,8 @@ def main():
                                         st.session_state["tempo_Q&A"] = tempo_qa
                                     else:
                                         contador += 1
+
+                                progress_bar.empty()
 
                 if st.session_state["clear_respostas"]:
                     ph.empty()
