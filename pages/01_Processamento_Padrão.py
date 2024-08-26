@@ -385,7 +385,7 @@ def main():
                                         Seja conciso. A resposta deve ser somente uma string com os tipos de documentos.
                                         Alguns documentos podem ter mais de um tipo, nesses casos incluir todos na string.
 
-                                        Os tipos da string devem estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                        Considere SOMENTE os tipos de string entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
                                         """,
                                     }
                                     # Seja conciso. A resposta deve ser somente uma string.
@@ -761,20 +761,26 @@ def main():
                                         6,
                                     )
 
-                                    itens_respostas = [
-                                        (item, resposta)
-                                        for item, resposta in resposta_llm.items()
-                                    ]
+                                    chaves_associadas = json_keys[int(i) - 1].split(
+                                        ", "
+                                    )
+                                    respostas_filtradas = {
+                                        chave: resposta_llm[chave]
+                                        for chave in chaves_associadas
+                                        if chave in resposta_llm
+                                    }
 
                                     st.session_state["tempo_ia"] = (
                                         st.session_state["tempo_vetorizacao"]
                                         + st.session_state["tempo_Q&A"]
                                     )
 
-                                    # print("\n\nItens respostas: ", itens_respostas)
+                                    print(
+                                        "\nRespostas filtradas: ", respostas_filtradas
+                                    )
 
                                     j = 1
-                                    for item, resposta in itens_respostas:
+                                    for item, resposta in respostas_filtradas.items():
                                         st.markdown(f"**{pergunta_prompt}**")
                                         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(i) + "." + str(j)
