@@ -40,9 +40,9 @@ def formatar_perguntas(texto):
     return perguntas_formatadas
 
 
-username = "palomar"
+username = st.session_state["logged_user"]
 
-if username in ["max.saito", "palomar", "mdtorre"]:
+if username in ["alesatu", "riccord", "palomar", "mdtorre", "deninas"]:
 
     # Cabeçalho
     st.subheader("Editor de Perguntas")

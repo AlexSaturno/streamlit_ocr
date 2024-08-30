@@ -310,83 +310,94 @@ def main():
     # ----------------------------------------------------------------------------------------------
     with tab1:
         with st.container(border=True):
-            st.session_state["tipo_documento"] = st.radio(
-                "",
-                [
-                    "Contrato Social",
-                    "Procuração PJ",
-                    "Estatuto Social",
-                    "Eleição de Diretoria",
-                    "Procuração PF",
-                ],
-                horizontal=True,
-                index=None,
-                on_change=clear_respostas,
-                label_visibility="collapsed",
+            pdf_file = st.file_uploader(
+                "Carregamento de arquivo",
+                type=["pdf"],
+                key="pdf_file",
+                on_change=zera_vetorizacao,
             )
-            st.write("")
-            if st.session_state["tipo_documento"] is not None:
-                pdf_file = st.file_uploader(
-                    "Carregamento de arquivo",
-                    type=["pdf"],
-                    key="pdf_file",
-                    on_change=zera_vetorizacao,
+
+            if pdf_file is not None and not st.session_state["status_vetorizacao"]:
+                # Se tiver PDFs na pasta quando inicializar a aplicação, apagá-los
+                for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
+                    arquivo.unlink()
+                savefile_name = normalize_filename(pdf_file.name)
+                with open(PASTA_ARQUIVOS / f"{savefile_name}", "wb") as f:
+                    f.write(pdf_file.read())
+
+                st.session_state["pdf_store"] = pdf_file.getbuffer()
+                st.session_state["file_name"] = pdf_file.name[:-4]
+
+                data_processamento = datetime.now().strftime("%Y-%m-%d")
+                hora_processamento = (datetime.now() - timedelta(hours=3)).strftime(
+                    "%H:%M"
                 )
+                st.session_state["data_processamento"] = data_processamento
+                st.session_state["hora_processamento"] = hora_processamento
+                tipo = unidecode(
+                    str(st.session_state["tipo_documento"]).replace(" ", "_")
+                )
+                file_name = st.session_state["file_name"]
 
-                if pdf_file is not None and not st.session_state["status_vetorizacao"]:
-                    # Se tiver PDFs na pasta quando inicializar a aplicação, apagá-los
-                    for arquivo in PASTA_ARQUIVOS.glob("*.pdf"):
-                        arquivo.unlink()
-                    savefile_name = normalize_filename(pdf_file.name)
-                    with open(PASTA_ARQUIVOS / f"{savefile_name}", "wb") as f:
-                        f.write(pdf_file.read())
+                id_unico = (
+                    str(st.session_state["data_processamento"])
+                    + "_"
+                    + str(st.session_state["hora_processamento"]).replace(":", "-")
+                    + "_"
+                    + unidecode(str(st.session_state["file_name"]).lower())
+                )
+                st.session_state["id_unico"] = id_unico
 
-                    st.session_state["pdf_store"] = pdf_file.getbuffer()
-                    st.session_state["file_name"] = pdf_file.name[:-4]
+                pdf_store_full_path = f"{str(PASTA_ARQUIVOS)}/{id_unico}" + ".pdf"
+                pdf_store_full_path = str(PASTA_ARQUIVOS) + "/" + id_unico + ".pdf"
 
-                    data_processamento = datetime.now().strftime("%Y-%m-%d")
-                    hora_processamento = (datetime.now() - timedelta(hours=3)).strftime(
-                        "%H:%M"
-                    )
-                    st.session_state["data_processamento"] = data_processamento
-                    st.session_state["hora_processamento"] = hora_processamento
-                    tipo = unidecode(
-                        str(st.session_state["tipo_documento"]).replace(" ", "_")
-                    )
-                    file_name = st.session_state["file_name"]
+                with open(pdf_store_full_path, "wb") as file:
+                    file.write(st.session_state["pdf_store"])
 
-                    id_unico = (
-                        str(st.session_state["data_processamento"])
-                        + "_"
-                        + str(st.session_state["hora_processamento"]).replace(":", "-")
-                        + "_"
-                        + unidecode(str(st.session_state["file_name"]).lower())
-                    )
-                    st.session_state["id_unico"] = id_unico
+                vectordb_store_folder = f"{str(PASTA_VECTORDB)}/{id_unico}"
+                if not os.path.exists(vectordb_store_folder):
+                    os.makedirs(vectordb_store_folder)
 
-                    pdf_store_full_path = f"{str(PASTA_ARQUIVOS)}/{id_unico}" + ".pdf"
-                    pdf_store_full_path = str(PASTA_ARQUIVOS) + "/" + id_unico + ".pdf"
+                if not st.session_state["status_vetorizacao"]:
+                    st.session_state["tempo_ia"] = 0
+                    start_time = time.time()
 
-                    with open(pdf_store_full_path, "wb") as file:
-                        file.write(st.session_state["pdf_store"])
+                    with st.spinner("Processando documento..."):
+                        # Converter PDF para imagens
+                        convert_pdf_to_images(pdf_store_full_path)
+                        st.session_state["status_vetorizacao"] = True
 
-                    vectordb_store_folder = f"{str(PASTA_VECTORDB)}/{id_unico}"
-                    if not os.path.exists(vectordb_store_folder):
-                        os.makedirs(vectordb_store_folder)
+                        # Identificar tipos de documentos:
+                        with get_openai_callback() as cb:
+                            id_unico = st.session_state["id_unico"]
+                            path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
+                            quantidade_paginas = len(os.listdir(path_atual))
+                            with get_openai_callback() as cb:
+                                response_tipo = chain.invoke(
+                                    {
+                                        "image_paths": [
+                                            f"{path_atual}/page{n}.jpg"
+                                            for n in range(0, quantidade_paginas)
+                                        ],
+                                        "prompt": """
+                                        Qual é o tipo do documento?
 
-                    if not st.session_state["status_vetorizacao"]:
+                                        Seja conciso. A resposta deve ser somente uma string com os tipos de documentos.
+                                        Alguns documentos podem ter mais de um tipo, nesses casos incluir todos na string.
+
+                                        Considere SOMENTE os tipos de string entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                        """,
+                                    }
+                                    # Seja conciso. A resposta deve ser somente uma string.
+                                    # A string deve estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
+                                )
+
+                        end_time = time.time()
+                        tempo_vetorizacao = end_time - start_time
+                        st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
-                        start_time = time.time()
 
-                        with st.spinner("Processando documento..."):
-
-                            # Converter PDF para imagens
-                            convert_pdf_to_images(pdf_store_full_path)
-                            st.session_state["status_vetorizacao"] = True
-                            end_time = time.time()
-                            tempo_vetorizacao = end_time - start_time
-                            st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
-                            st.session_state["tempo_ia"] = 0
+                        st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
@@ -395,15 +406,45 @@ def main():
                     str(PASTA_RAIZ) + "/perguntas_sidebar.json", "r", encoding="utf8"
                 ) as f:
                     perguntas = json.load(f)
-                perguntas_selecionadas = list(
-                    perguntas[st.session_state["tipo_documento"]].values()
-                )
 
+                tipo_documentos = st.session_state["tipo_documento"]
+                # print("Tipo de documentos: ", tipo_documentos)
+                if isinstance(tipo_documentos, str):
+                    tipo_documentos = [
+                        doc.strip() for doc in tipo_documentos.split(",")
+                    ]
+
+                # Processa as perguntas de acordo com a quantidade de documentos
+                perguntas_selecionadas = []
+                lista_perguntas = []
+
+                # Itera sobre cada documento e adiciona suas perguntas na lista
+                for tipo_doc in tipo_documentos:
+                    if tipo_doc in perguntas:
+                        perguntas_do_tipo = list(perguntas[tipo_doc].values())
+                        lista_perguntas.extend(perguntas_do_tipo)
+                    else:
+                        print(
+                            f"Tipo de documento {tipo_doc} não encontrado nas perguntas."
+                        )
+
+                perguntas_selecionadas = lista_perguntas
                 st.session_state["selecionadas"] = perguntas_selecionadas
 
                 with open(str(PASTA_RAIZ) + "/json_keys_dict.json", "r") as f:
                     json_keys_dict = json.load(f)
-                json_keys = json_keys_dict[st.session_state["tipo_documento"]]
+
+                # Itera sobre cada documento e adiciona suas perguntas na lista
+                lista_parametros = []
+                for tipo_param in tipo_documentos:
+                    if tipo_param in json_keys_dict:
+                        parametros_dict = list(json_keys_dict[tipo_param])
+                        lista_parametros.extend(parametros_dict)
+                    else:
+                        print(
+                            f"Tipo de parâmetro {tipo_param} não encontrado nas perguntas."
+                        )
+                json_keys = lista_parametros
 
                 llm_call = st.button(
                     f"Processar perguntas padrão para {st.session_state.tipo_documento}"
@@ -413,116 +454,228 @@ def main():
                 with ph.container():
                     if llm_call:
                         if not st.session_state["clear_respostas"]:
-                            start_time = time.time()
-                            perguntas_json = st.session_state["selecionadas"]
-                            total = len(perguntas_json)
+                            with st.spinner("Processando perguntas..."):
+                                start_time = time.time()
+                                perguntas_json = st.session_state["selecionadas"]
+                                total = len(perguntas_json)
 
-                            st.session_state["Q&A"] = {}
-                            contador = 1
-
-                            with st.container(border=True):
-                                grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
-
-                                with st.container(border=True):
-                                    grid[0].markdown("**#**")
-                                    grid[1].markdown("**Item**")
-                                    grid[2].markdown("**Resposta IA**")
-                                    grid[3].markdown("**Avaliação**")
-                                    grid[4].markdown("**Saída FPO**")
+                                st.session_state["Q&A"] = {}
+                                contador = 1
+                                query = ""
+                                # additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
+                                additional_instructions_general = f"""
+                                You must follow the instructions bellow to answer the questions:
+                                    - Analyze the whole context before answer
+                                    - All replies must be in Portuguese from Brazil. 
+                                    - Be concise. 
+                                    - ONLY return a valid JSON object (no other text is necessary). 
+                                        - The values must be a single string. 
+                                        - If multiple items are included in the answer, separate them by comma. 
+                                        - If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. 
+                                        - The JSON must strictly follow the standard JSON format. 
+                                        - Do not wrap the JSON code in any Markdown or other formatting.
+                                    - Between every following question, analyze the context before answer.
+                                """
 
                                 for i, pergunta in enumerate(perguntas_json):
-                                    tokens_query_embedding = num_tokens_from_string(
-                                        pergunta, "cl100k_base"
-                                    )
+                                    query += f"{i+1}) {pergunta}\n"
 
-                                    additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The json keys are: {json_keys[i]}. The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
-                                    query = pergunta + additional_instructions_general
+                                query += f"\n\n{additional_instructions_general}\n\nThe json keys are: "
 
-                                    with get_openai_callback() as cb:
-                                        id_unico = st.session_state["id_unico"]
-                                        path_atual = (
-                                            f"{PASTA_IMAGENS}/{id_unico}_images"
-                                        )
-                                        quantidade_paginas = len(os.listdir(path_atual))
-                                        with get_openai_callback() as cb:
-                                            response = chain.invoke(
-                                                {
-                                                    "image_paths": [
-                                                        f"{path_atual}/page{n}.jpg"
-                                                        for n in range(
-                                                            0, quantidade_paginas
-                                                        )
-                                                    ],
-                                                    "prompt": query,
-                                                }
-                                            )
-                                        print("Total tokens: ", cb.total_tokens)
-                                        print("Total cost: ", cb.total_cost)
+                                for i, pergunta in enumerate(perguntas_json):
+                                    query += f"{json_keys[i]}, "
 
-                                    response = response.replace(
-                                        "```json\n", ""
-                                    ).replace("\n```", "")
-                                    try:
-                                        response = json.loads(response)
-                                    except:
-                                        pass
+                                tokens_query_embedding = num_tokens_from_string(
+                                    query, "cl100k_base"
+                                )
 
-                                    print("Response: ", response)
-
-                                    st.session_state["Q&A"].update(
+                                with get_openai_callback() as cb:
+                                    id_unico = st.session_state["id_unico"]
+                                    path_atual = f"{PASTA_IMAGENS}/{id_unico}_images"
+                                    quantidade_paginas = len(os.listdir(path_atual))
+                                    response = chain.invoke(
                                         {
-                                            str(contador): {
-                                                "pergunta": pergunta,
-                                                "resposta_ia": response,
-                                                "tokens_completion": cb.completion_tokens,
-                                                "tokens_prompt": cb.prompt_tokens,
-                                                "tokens_query_embedding": tokens_query_embedding,
-                                            }
+                                            "image_paths": [
+                                                f"{path_atual}/page{n}.jpg"
+                                                for n in range(0, quantidade_paginas)
+                                            ],
+                                            "prompt": query,
                                         }
                                     )
+                                    # print("Total tokens: ", cb.total_tokens)
 
-                                    atributos_pergunta = st.session_state["Q&A"][
-                                        str(contador)
-                                    ]
+                                with st.container(border=True):
+                                    grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
 
-                                    pergunta_prompt = atributos_pergunta["pergunta"]
-                                    resposta_llm = atributos_pergunta["resposta_ia"]
-                                    print("Resposta LLM: ", resposta_llm)
-                                    itens_respostas = [
-                                        (item, resposta)
-                                        for item, resposta in resposta_llm.items()
-                                    ]
-                                    j = 1
-                                    for item, resposta in itens_respostas:
-                                        st.markdown(f"**{pergunta_prompt}**")
-                                        grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
-                                        indice = str(contador) + "." + str(j)
-                                        grid[0].markdown(indice)
-                                        grid[1].write_stream(stream=get_stream(item))
-                                        grid[2].write_stream(
-                                            stream=get_stream(resposta)
-                                        )
-                                        j += 1
-                                        avaliacao = grid[3].checkbox(
-                                            "ok",
-                                            key=f"check_avalia1_{indice}",
-                                            disabled=True,
-                                        )
-                                        saida_fpo = grid[4].text_input(
-                                            "",
-                                            value="",
-                                            key=f"text_input1_{indice}",
-                                            label_visibility="collapsed",
-                                            disabled=True,
-                                        )
+                                    with st.container(border=True):
+                                        grid[0].markdown("**#**")
+                                        grid[1].markdown("**Item**")
+                                        grid[2].markdown("**Resposta IA**")
+                                        grid[3].markdown("**Avaliação**")
+                                        grid[4].markdown("**Saída FPO**")
 
-                                    if contador == total:
-                                        st.session_state["Q&A_done"] = True
-                                        end_time = time.time()
-                                        tempo_qa = end_time - start_time
-                                        st.session_state["tempo_Q&A"] = tempo_qa
-                                    else:
-                                        contador += 1
+                                        response = response.replace(
+                                            "```json\n", ""
+                                        ).replace("\n```", "")
+                                        response = json.loads(response)
+
+                                        for i, pergunta in enumerate(perguntas_json):
+                                            chaves_associadas = json_keys[i].split(", ")
+
+                                            st.session_state["Q&A"].update(
+                                                {
+                                                    str(contador): {
+                                                        "pergunta": pergunta,
+                                                        "resposta_ia": response,
+                                                        "tokens_completion": cb.completion_tokens,
+                                                        "tokens_prompt": cb.prompt_tokens,
+                                                        "tokens_query_embedding": tokens_query_embedding,
+                                                    }
+                                                }
+                                            )
+
+                                            atributos_pergunta = st.session_state[
+                                                "Q&A"
+                                            ][str(contador)]
+
+                                            pergunta_prompt = atributos_pergunta[
+                                                "pergunta"
+                                            ]
+                                            resposta_llm = atributos_pergunta[
+                                                "resposta_ia"
+                                            ]
+
+                                            if contador == total:
+                                                st.session_state["Q&A_done"] = True
+                                                end_time = time.time()
+                                                tempo_qa = end_time - start_time
+                                                st.session_state["tempo_Q&A"] = tempo_qa
+                                            else:
+                                                contador += 1
+
+                        # if not st.session_state["clear_respostas"]:
+                        #     start_time = time.time()
+                        #     perguntas_json = st.session_state["selecionadas"]
+                        #     total = len(perguntas_json)
+
+                        #     st.session_state["Q&A"] = {}
+                        #     contador = 1
+
+                        #     with st.container(border=True):
+                        #         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
+
+                        #         with st.container(border=True):
+                        #             grid[0].markdown("**#**")
+                        #             grid[1].markdown("**Item**")
+                        #             grid[2].markdown("**Resposta IA**")
+                        #             grid[3].markdown("**Avaliação**")
+                        #             grid[4].markdown("**Saída FPO**")
+
+                        #         # Inicializa progress_bar
+                        #         progress_text = f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde..."
+                        #         progress_bar = st.progress(0, text=progress_text)
+
+                        #         for i, pergunta in enumerate(perguntas_json):
+                        #             progresso = contador / len(perguntas_json)
+                        #             progress_bar.progress(
+                        #                 progresso,
+                        #                 text=f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde...",
+                        #             )
+
+                        #             tokens_query_embedding = num_tokens_from_string(
+                        #                 pergunta, "cl100k_base"
+                        #             )
+
+                        #             additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The json keys are: {json_keys[i]}. The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
+                        #             query = pergunta + additional_instructions_general
+
+                        #             with get_openai_callback() as cb:
+                        #                 id_unico = st.session_state["id_unico"]
+                        #                 path_atual = (
+                        #                     f"{PASTA_IMAGENS}/{id_unico}_images"
+                        #                 )
+                        #                 quantidade_paginas = len(os.listdir(path_atual))
+                        #                 with get_openai_callback() as cb:
+                        #                     response = chain.invoke(
+                        #                         {
+                        #                             "image_paths": [
+                        #                                 f"{path_atual}/page{n}.jpg"
+                        #                                 for n in range(
+                        #                                     0, quantidade_paginas
+                        #                                 )
+                        #                             ],
+                        #                             "prompt": query,
+                        #                         }
+                        #                     )
+                        #                 print("Total tokens: ", cb.total_tokens)
+                        #                 print("Total cost: ", cb.total_cost)
+
+                        #             response = response.replace(
+                        #                 "```json\n", ""
+                        #             ).replace("\n```", "")
+                        #             try:
+                        #                 response = json.loads(response)
+                        #             except:
+                        #                 pass
+
+                        #             print("Response: ", response)
+
+                        #             st.session_state["Q&A"].update(
+                        #                 {
+                        #                     str(contador): {
+                        #                         "pergunta": pergunta,
+                        #                         "resposta_ia": response,
+                        #                         "tokens_completion": cb.completion_tokens,
+                        #                         "tokens_prompt": cb.prompt_tokens,
+                        #                         "tokens_query_embedding": tokens_query_embedding,
+                        #                     }
+                        #                 }
+                        #             )
+
+                        #             atributos_pergunta = st.session_state["Q&A"][
+                        #                 str(contador)
+                        #             ]
+
+                        #             pergunta_prompt = atributos_pergunta["pergunta"]
+                        #             resposta_llm = atributos_pergunta["resposta_ia"]
+                        #             print("Resposta LLM: ", resposta_llm)
+                        #             itens_respostas = [
+                        #                 (item, resposta)
+                        #                 for item, resposta in resposta_llm.items()
+                        #             ]
+                        #             j = 1
+                        #             for item, resposta in itens_respostas:
+                        #                 st.markdown(f"**{pergunta_prompt}**")
+                        #                 grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
+                        #                 indice = str(contador) + "." + str(j)
+                        #                 grid[0].markdown(indice)
+                        #                 grid[1].write_stream(stream=get_stream(item))
+                        #                 grid[2].write_stream(
+                        #                     stream=get_stream(resposta)
+                        #                 )
+                        #                 j += 1
+                        #                 avaliacao = grid[3].checkbox(
+                        #                     "ok",
+                        #                     key=f"check_avalia1_{indice}",
+                        #                     disabled=True,
+                        #                 )
+                        #                 saida_fpo = grid[4].text_input(
+                        #                     "",
+                        #                     value="",
+                        #                     key=f"text_input1_{indice}",
+                        #                     label_visibility="collapsed",
+                        #                     disabled=True,
+                        #                 )
+
+                        #             if contador == total:
+                        #                 st.session_state["Q&A_done"] = True
+                        #                 end_time = time.time()
+                        #                 tempo_qa = end_time - start_time
+                        #                 st.session_state["tempo_Q&A"] = tempo_qa
+                        #             else:
+                        #                 contador += 1
+
+                        #         progress_bar.empty()
 
                 if st.session_state["clear_respostas"]:
                     ph.empty()
@@ -577,7 +730,6 @@ def main():
                                 for i, atributos_pergunta in st.session_state[
                                     "Q&A"
                                 ].items():
-
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
                                     tokens_prompt = atributos_pergunta["tokens_prompt"]
@@ -609,18 +761,26 @@ def main():
                                         6,
                                     )
 
-                                    itens_respostas = [
-                                        (item, resposta)
-                                        for item, resposta in resposta_llm.items()
-                                    ]
+                                    chaves_associadas = json_keys[int(i) - 1].split(
+                                        ", "
+                                    )
+                                    respostas_filtradas = {
+                                        chave: resposta_llm[chave]
+                                        for chave in chaves_associadas
+                                        if chave in resposta_llm
+                                    }
 
                                     st.session_state["tempo_ia"] = (
                                         st.session_state["tempo_vetorizacao"]
                                         + st.session_state["tempo_Q&A"]
                                     )
 
+                                    print(
+                                        "\nRespostas filtradas: ", respostas_filtradas
+                                    )
+
                                     j = 1
-                                    for item, resposta in itens_respostas:
+                                    for item, resposta in respostas_filtradas.items():
                                         st.markdown(f"**{pergunta_prompt}**")
                                         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(i) + "." + str(j)

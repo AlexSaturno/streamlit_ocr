@@ -32,6 +32,7 @@ def check_password():
             st.write("ㅤ")  # espaço em branco para logo
             st.title("FPO — Login")
             username = st.text_input("Username", key="username")
+            st.session_state["logged_user"] = username
             st.text_input("Password", type="password", key="password")
             submitted = st.form_submit_button("Login")
             if submitted:

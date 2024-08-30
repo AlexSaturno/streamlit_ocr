@@ -12,7 +12,14 @@
         "obrigacoes",
         "alienacao",
         "movimentacao",
-        "procuracao"
+        "procuracao",
+        "qtd_min_representacao",
+        "gar_terc2",
+        "alien_imoveis2",
+        "alien_moveis2",
+        "contratos2",
+        "repr_bancaria2",
+        "procuracao2"
     ],
     "Procura\u00e7\u00e3o PJ": [
         "nome_companhia, cnpj_companhia",
