@@ -42,7 +42,7 @@ def formatar_perguntas(texto):
 
 username = st.session_state["logged_user"]
 
-if username in ["alesatu", "riccord", "palomar", "mdtorre", "deninas"]:
+if username in ["alesatu", "riccord", "palomar", "mdtorre", "deninas", "igorsan"]:
 
     # Cabeçalho
     st.subheader("Editor de Perguntas")
