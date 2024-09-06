@@ -520,8 +520,20 @@ def main():
                             contador = 1
                             total = 0
 
-                            def processar_perguntas(perguntas_json, json_keys, additional_instructions_general = ""):
+                            def processar_perguntas(perguntas_json, json_keys):
                                 nonlocal contador, total
+                                additional_instructions_general = f"""
+                                        You must follow the instructions bellow to answer the questions:
+                                            - Analyze the whole context before answer
+                                            - All replies must be in Portuguese from Brazil. 
+                                            - ONLY return a valid JSON object
+                                                - The user will provide the output format. Otherwise values must be a single string. 
+                                                - If multiple items are included in the answer, separate them by comma. 
+                                                - If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. 
+                                                - The JSON must strictly follow the standard JSON format. 
+                                                - Do not wrap the JSON code in any Markdown or other formatting.
+                                            - Between every following question, analyze the context before answer.
+                                    """
 
                                 if len(perguntas_json) != len(json_keys):
                                     st.error(
@@ -578,18 +590,6 @@ def main():
                             with st.spinner("Processando perguntas padrão..."):
                                 # Processamento das perguntas padrão
                                 if st.session_state["perguntas_padrao"]:
-                                    additional_instructions_general = f"""
-                                        You must follow the instructions bellow to answer the questions:
-                                            - Analyze the whole context before answer
-                                            - All replies must be in Portuguese from Brazil. 
-                                            - ONLY return a valid JSON object
-                                                - The user will provide the output format. Otherwise values must be a single string. 
-                                                - If multiple items are included in the answer, separate them by comma. 
-                                                - If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. 
-                                                - The JSON must strictly follow the standard JSON format. 
-                                                - Do not wrap the JSON code in any Markdown or other formatting.
-                                            - Between every following question, analyze the context before answer.
-                                    """
                                     print("Processando perguntas padrão")
                                     perguntas_padrao_json = st.session_state[
                                         "perguntas_padrao"
@@ -599,7 +599,7 @@ def main():
                                     ]  # Ajusta para a quantidade de perguntas padrão
                                     total += len(perguntas_padrao_json)
                                     processar_perguntas(
-                                        perguntas_padrao_json, json_keys_padrao, additional_instructions_general
+                                        perguntas_padrao_json, json_keys_padrao
                                     )
 
                             with st.spinner("Processando condições especiais..."):
