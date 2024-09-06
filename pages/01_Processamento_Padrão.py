@@ -398,7 +398,7 @@ def main():
                         st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
 
-                        st.session_state["tipo_documento"] = response_tipo
+                        st.session_state["tipo_documento"] = response_tipo.strip('"')
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
