@@ -231,8 +231,11 @@ with open("./styles.css") as f:
 
 # Inicio da aplicação
 def main():
-    if "selecionadas" not in st.session_state:
-        st.session_state["selecionadas"] = None
+    if "perguntas_padrao" not in st.session_state:
+        st.session_state["perguntas_padrao"] = None
+
+    if "condicoes_especiais" not in st.session_state:
+        st.session_state["condicoes_especiais"] = None
 
     if "respostas_download_txt" not in st.session_state:
         st.session_state["respostas_download_txt"] = None
@@ -388,8 +391,6 @@ def main():
                                         Considere SOMENTE os tipos de string entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
                                         """,
                                     }
-                                    # Seja conciso. A resposta deve ser somente uma string.
-                                    # A string deve estar somente entre as opções: Contrato Social, Procuração PJ, Estatuto Social, Eleição de Diretoria, Procuração PF.
                                 )
 
                         end_time = time.time()
@@ -408,42 +409,87 @@ def main():
                     perguntas = json.load(f)
 
                 tipo_documentos = st.session_state["tipo_documento"]
-                # print("Tipo de documentos: ", tipo_documentos)
+
                 if isinstance(tipo_documentos, str):
                     tipo_documentos = [
                         doc.strip() for doc in tipo_documentos.split(",")
                     ]
 
                 # Processa as perguntas de acordo com a quantidade de documentos
-                perguntas_selecionadas = []
-                lista_perguntas = []
+                perguntas_padrao = []
+                condicoes_especiais = []
 
                 # Itera sobre cada documento e adiciona suas perguntas na lista
                 for tipo_doc in tipo_documentos:
                     if tipo_doc in perguntas:
-                        perguntas_do_tipo = list(perguntas[tipo_doc].values())
-                        lista_perguntas.extend(perguntas_do_tipo)
+                        perguntas_do_tipo = perguntas[tipo_doc]
+                        print("Perguntas do tipo: ", perguntas_do_tipo)
+                        if "perguntas_padrao" in perguntas_do_tipo:
+                            perguntas_padrao.extend(
+                                list(perguntas_do_tipo["perguntas_padrao"].values())
+                            )
+                        if "condicoes_especiais" in perguntas_do_tipo:
+                            condicoes_especiais.extend(
+                                list(perguntas_do_tipo["condicoes_especiais"].values())
+                            )
                     else:
                         print(
                             f"Tipo de documento {tipo_doc} não encontrado nas perguntas."
                         )
 
-                perguntas_selecionadas = lista_perguntas
-                st.session_state["selecionadas"] = perguntas_selecionadas
+                st.session_state["perguntas_padrao"] = perguntas_padrao
+                st.session_state["condicoes_especiais"] = condicoes_especiais
 
                 with open(str(PASTA_RAIZ) + "/json_keys_dict.json", "r") as f:
                     json_keys_dict = json.load(f)
 
-                # Itera sobre cada documento e adiciona suas perguntas na lista
+                # Inicializa a lista de parâmetros
                 lista_parametros = []
+
+                # Adiciona apenas as perguntas padrão para todos os tipos de documentos
                 for tipo_param in tipo_documentos:
-                    if tipo_param in json_keys_dict:
-                        parametros_dict = list(json_keys_dict[tipo_param])
-                        lista_parametros.extend(parametros_dict)
+                    if tipo_param in json_keys_dict and tipo_param in perguntas:
+                        # Obtenha a lista de perguntas padrão do perguntas_sidebar.json
+                        perguntas_padrao = perguntas[tipo_param].get(
+                            "perguntas_padrao", {}
+                        )
+                        if perguntas_padrao:
+                            # Para cada pergunta padrão, localize a chave correspondente em json_keys_dict e adicione
+                            num_perguntas_padrao = len(perguntas_padrao)
+                            parametros_dict_padrao = json_keys_dict[tipo_param][
+                                :num_perguntas_padrao
+                            ]
+                            lista_parametros.extend(
+                                parametros_dict_padrao
+                            )  # Adiciona as perguntas padrão
                     else:
                         print(
                             f"Tipo de parâmetro {tipo_param} não encontrado nas perguntas."
                         )
+
+                # Adiciona apenas as condicoes_especiais para todos os tipos de documentos
+                for tipo_param in tipo_documentos:
+                    if tipo_param in json_keys_dict and tipo_param in perguntas:
+                        # Obtenha a lista de condicoes_especiais do perguntas_sidebar.json
+                        condicoes_especiais = perguntas[tipo_param].get(
+                            "condicoes_especiais", {}
+                        )
+                        if condicoes_especiais:
+                            # Para cada condição especial, localize a chave correspondente em json_keys_dict e adicione
+                            num_condicoes_especiais = len(condicoes_especiais)
+                            # Pegue a partir do ponto onde terminaram as perguntas padrão
+                            parametros_dict_especiais = json_keys_dict[tipo_param][
+                                -num_condicoes_especiais:
+                            ]
+                            lista_parametros.extend(
+                                parametros_dict_especiais
+                            )  # Adiciona as condições especiais
+                    else:
+                        print(
+                            f"Tipo de parâmetro {tipo_param} não encontrado nas perguntas."
+                        )
+
+                # Atribui a lista final de parâmetros à variável json_keys
                 json_keys = lista_parametros
 
                 llm_call = st.button(
@@ -454,37 +500,40 @@ def main():
                 with ph.container():
                     if llm_call:
                         if not st.session_state["clear_respostas"]:
-                            with st.spinner("Processando perguntas..."):
-                                start_time = time.time()
-                                perguntas_json = st.session_state["selecionadas"]
-                                total = len(perguntas_json)
 
-                                st.session_state["Q&A"] = {}
-                                contador = 1
+                            def montar_query(
+                                perguntas, json_keys, additional_instructions
+                            ):
                                 query = ""
-                                # additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
-                                additional_instructions_general = f"""
-                                You must follow the instructions bellow to answer the questions:
-                                    - Analyze the whole context before answer
-                                    - All replies must be in Portuguese from Brazil. 
-                                    - Be concise. 
-                                    - ONLY return a valid JSON object (no other text is necessary). 
-                                        - The values must be a single string. 
-                                        - If multiple items are included in the answer, separate them by comma. 
-                                        - If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. 
-                                        - The JSON must strictly follow the standard JSON format. 
-                                        - Do not wrap the JSON code in any Markdown or other formatting.
-                                    - Between every following question, analyze the context before answer.
-                                """
-
-                                for i, pergunta in enumerate(perguntas_json):
+                                for i, pergunta in enumerate(perguntas):
                                     query += f"{i+1}) {pergunta}\n"
 
-                                query += f"\n\n{additional_instructions_general}\n\nThe json keys are: "
+                                query += f"\n\n{additional_instructions}\n\nThe json keys are: "
 
-                                for i, pergunta in enumerate(perguntas_json):
+                                for i, pergunta in enumerate(perguntas):
                                     query += f"{json_keys[i]}, "
 
+                                return query
+
+                            start_time = time.time()
+                            st.session_state["Q&A"] = {}
+                            contador = 1
+                            total = 0
+
+                            def processar_perguntas(perguntas_json, json_keys, additional_instructions_general = ""):
+                                nonlocal contador, total
+
+                                if len(perguntas_json) != len(json_keys):
+                                    st.error(
+                                        "A quantidade de perguntas e chaves não corresponde."
+                                    )
+                                    return
+
+                                query = montar_query(
+                                    perguntas_json,
+                                    json_keys,
+                                    additional_instructions_general,
+                                )
                                 tokens_query_embedding = num_tokens_from_string(
                                     query, "cl100k_base"
                                 )
@@ -502,180 +551,76 @@ def main():
                                             "prompt": query,
                                         }
                                     )
-                                    # print("Total tokens: ", cb.total_tokens)
+
+                                response = response.replace("```json\n", "").replace(
+                                    "\n```", ""
+                                )
+                                response = json.loads(response)
 
                                 with st.container(border=True):
-                                    grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
+                                    for i, pergunta in enumerate(perguntas_json):
+                                        chaves_associadas = json_keys[i].split(", ")
+                                        print(f"Pergunta {i}: {pergunta}\n")
 
-                                    with st.container(border=True):
-                                        grid[0].markdown("**#**")
-                                        grid[1].markdown("**Item**")
-                                        grid[2].markdown("**Resposta IA**")
-                                        grid[3].markdown("**Avaliação**")
-                                        grid[4].markdown("**Saída FPO**")
-
-                                        response = response.replace(
-                                            "```json\n", ""
-                                        ).replace("\n```", "")
-                                        response = json.loads(response)
-
-                                        for i, pergunta in enumerate(perguntas_json):
-                                            chaves_associadas = json_keys[i].split(", ")
-
-                                            st.session_state["Q&A"].update(
-                                                {
-                                                    str(contador): {
-                                                        "pergunta": pergunta,
-                                                        "resposta_ia": response,
-                                                        "tokens_completion": cb.completion_tokens,
-                                                        "tokens_prompt": cb.prompt_tokens,
-                                                        "tokens_query_embedding": tokens_query_embedding,
-                                                    }
+                                        st.session_state["Q&A"].update(
+                                            {
+                                                str(contador): {
+                                                    "pergunta": pergunta,
+                                                    "resposta_ia": response,
+                                                    "tokens_completion": cb.completion_tokens,
+                                                    "tokens_prompt": cb.prompt_tokens,
+                                                    "tokens_query_embedding": tokens_query_embedding,
                                                 }
-                                            )
+                                            }
+                                        )
+                                        contador += 1
 
-                                            atributos_pergunta = st.session_state[
-                                                "Q&A"
-                                            ][str(contador)]
+                            with st.spinner("Processando perguntas padrão..."):
+                                # Processamento das perguntas padrão
+                                if st.session_state["perguntas_padrao"]:
+                                    additional_instructions_general = f"""
+                                        You must follow the instructions bellow to answer the questions:
+                                            - Analyze the whole context before answer
+                                            - All replies must be in Portuguese from Brazil. 
+                                            - ONLY return a valid JSON object
+                                                - The user will provide the output format. Otherwise values must be a single string. 
+                                                - If multiple items are included in the answer, separate them by comma. 
+                                                - If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. 
+                                                - The JSON must strictly follow the standard JSON format. 
+                                                - Do not wrap the JSON code in any Markdown or other formatting.
+                                            - Between every following question, analyze the context before answer.
+                                    """
+                                    print("Processando perguntas padrão")
+                                    perguntas_padrao_json = st.session_state[
+                                        "perguntas_padrao"
+                                    ]
+                                    json_keys_padrao = json_keys[
+                                        : len(perguntas_padrao_json)
+                                    ]  # Ajusta para a quantidade de perguntas padrão
+                                    total += len(perguntas_padrao_json)
+                                    processar_perguntas(
+                                        perguntas_padrao_json, json_keys_padrao, additional_instructions_general
+                                    )
 
-                                            pergunta_prompt = atributos_pergunta[
-                                                "pergunta"
-                                            ]
-                                            resposta_llm = atributos_pergunta[
-                                                "resposta_ia"
-                                            ]
+                            with st.spinner("Processando condições especiais..."):
+                                # Processamento das condições especiais
+                                if st.session_state["condicoes_especiais"]:
+                                    print("Processando condições especiais")
+                                    condicoes_especias_json = st.session_state[
+                                        "condicoes_especiais"
+                                    ]
+                                    json_keys_especiais = json_keys[
+                                        -len(condicoes_especias_json) :
+                                    ]  # Ajusta para a quantidade de perguntas de condições especiais
+                                    total += len(condicoes_especias_json)
+                                    processar_perguntas(
+                                        condicoes_especias_json, json_keys_especiais
+                                    )
 
-                                            if contador == total:
-                                                st.session_state["Q&A_done"] = True
-                                                end_time = time.time()
-                                                tempo_qa = end_time - start_time
-                                                st.session_state["tempo_Q&A"] = tempo_qa
-                                            else:
-                                                contador += 1
-
-                        # if not st.session_state["clear_respostas"]:
-                        #     start_time = time.time()
-                        #     perguntas_json = st.session_state["selecionadas"]
-                        #     total = len(perguntas_json)
-
-                        #     st.session_state["Q&A"] = {}
-                        #     contador = 1
-
-                        #     with st.container(border=True):
-                        #         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
-
-                        #         with st.container(border=True):
-                        #             grid[0].markdown("**#**")
-                        #             grid[1].markdown("**Item**")
-                        #             grid[2].markdown("**Resposta IA**")
-                        #             grid[3].markdown("**Avaliação**")
-                        #             grid[4].markdown("**Saída FPO**")
-
-                        #         # Inicializa progress_bar
-                        #         progress_text = f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde..."
-                        #         progress_bar = st.progress(0, text=progress_text)
-
-                        #         for i, pergunta in enumerate(perguntas_json):
-                        #             progresso = contador / len(perguntas_json)
-                        #             progress_bar.progress(
-                        #                 progresso,
-                        #                 text=f"Processando pergunta {contador} de {len(perguntas_json)}, por favor aguarde...",
-                        #             )
-
-                        #             tokens_query_embedding = num_tokens_from_string(
-                        #                 pergunta, "cl100k_base"
-                        #             )
-
-                        #             additional_instructions_general = f"""Be correct and concise. All replies must be in Portuguese from Brazil. ONLY return a valid JSON object (no other text is necessary). The json keys are: {json_keys[i]}. The values must be a single string. If multiple items are included in the answer, separate them by comma. If you don't find the answer in the given context, just reply the string 'Informação não encontrada' as the value for each key. The JSON must strictly follow the standard JSON format. Do not wrap the JSON code in any Markdown or other formatting."""
-                        #             query = pergunta + additional_instructions_general
-
-                        #             with get_openai_callback() as cb:
-                        #                 id_unico = st.session_state["id_unico"]
-                        #                 path_atual = (
-                        #                     f"{PASTA_IMAGENS}/{id_unico}_images"
-                        #                 )
-                        #                 quantidade_paginas = len(os.listdir(path_atual))
-                        #                 with get_openai_callback() as cb:
-                        #                     response = chain.invoke(
-                        #                         {
-                        #                             "image_paths": [
-                        #                                 f"{path_atual}/page{n}.jpg"
-                        #                                 for n in range(
-                        #                                     0, quantidade_paginas
-                        #                                 )
-                        #                             ],
-                        #                             "prompt": query,
-                        #                         }
-                        #                     )
-                        #                 print("Total tokens: ", cb.total_tokens)
-                        #                 print("Total cost: ", cb.total_cost)
-
-                        #             response = response.replace(
-                        #                 "```json\n", ""
-                        #             ).replace("\n```", "")
-                        #             try:
-                        #                 response = json.loads(response)
-                        #             except:
-                        #                 pass
-
-                        #             print("Response: ", response)
-
-                        #             st.session_state["Q&A"].update(
-                        #                 {
-                        #                     str(contador): {
-                        #                         "pergunta": pergunta,
-                        #                         "resposta_ia": response,
-                        #                         "tokens_completion": cb.completion_tokens,
-                        #                         "tokens_prompt": cb.prompt_tokens,
-                        #                         "tokens_query_embedding": tokens_query_embedding,
-                        #                     }
-                        #                 }
-                        #             )
-
-                        #             atributos_pergunta = st.session_state["Q&A"][
-                        #                 str(contador)
-                        #             ]
-
-                        #             pergunta_prompt = atributos_pergunta["pergunta"]
-                        #             resposta_llm = atributos_pergunta["resposta_ia"]
-                        #             print("Resposta LLM: ", resposta_llm)
-                        #             itens_respostas = [
-                        #                 (item, resposta)
-                        #                 for item, resposta in resposta_llm.items()
-                        #             ]
-                        #             j = 1
-                        #             for item, resposta in itens_respostas:
-                        #                 st.markdown(f"**{pergunta_prompt}**")
-                        #                 grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
-                        #                 indice = str(contador) + "." + str(j)
-                        #                 grid[0].markdown(indice)
-                        #                 grid[1].write_stream(stream=get_stream(item))
-                        #                 grid[2].write_stream(
-                        #                     stream=get_stream(resposta)
-                        #                 )
-                        #                 j += 1
-                        #                 avaliacao = grid[3].checkbox(
-                        #                     "ok",
-                        #                     key=f"check_avalia1_{indice}",
-                        #                     disabled=True,
-                        #                 )
-                        #                 saida_fpo = grid[4].text_input(
-                        #                     "",
-                        #                     value="",
-                        #                     key=f"text_input1_{indice}",
-                        #                     label_visibility="collapsed",
-                        #                     disabled=True,
-                        #                 )
-
-                        #             if contador == total:
-                        #                 st.session_state["Q&A_done"] = True
-                        #                 end_time = time.time()
-                        #                 tempo_qa = end_time - start_time
-                        #                 st.session_state["tempo_Q&A"] = tempo_qa
-                        #             else:
-                        #                 contador += 1
-
-                        #         progress_bar.empty()
+                            # Finalização
+                            st.session_state["Q&A_done"] = True
+                            end_time = time.time()
+                            st.session_state["tempo_Q&A"] = end_time - start_time
 
                 if st.session_state["clear_respostas"]:
                     ph.empty()
@@ -727,21 +672,25 @@ def main():
                                     grid[3].markdown("**Avaliação**")
                                     grid[4].markdown("**Saída FPO**")
 
-                                for i, atributos_pergunta in st.session_state[
+                                # Processa as respostas
+                                for i_str, atributos_pergunta in st.session_state[
                                     "Q&A"
                                 ].items():
+                                    i = int(
+                                        i_str
+                                    )  # Converte a chave do dicionário para um número inteiro
                                     pergunta_prompt = atributos_pergunta["pergunta"]
                                     resposta_llm = atributos_pergunta["resposta_ia"]
                                     tokens_prompt = atributos_pergunta["tokens_prompt"]
                                     tokens_completion = atributos_pergunta[
                                         "tokens_completion"
                                     ]
-                                    tokens_doc_embedding = st.session_state[
-                                        "tokens_doc_embedding"
-                                    ]
                                     tokens_query_embedding = atributos_pergunta[
                                         "tokens_query_embedding"
                                     ]
+                                    tokens_doc_embedding = st.session_state.get(
+                                        "tokens_doc_embedding", 0
+                                    )
 
                                     custo_prompt = (
                                         token_cost["tokens_prompt"] * tokens_prompt
@@ -761,27 +710,53 @@ def main():
                                         6,
                                     )
 
-                                    chaves_associadas = json_keys[int(i) - 1].split(
-                                        ", "
+                                    # Definir o número total de perguntas
+                                    total_perguntas_padrao = len(
+                                        st.session_state["perguntas_padrao"]
                                     )
-                                    respostas_filtradas = {
-                                        chave: resposta_llm[chave]
-                                        for chave in chaves_associadas
-                                        if chave in resposta_llm
-                                    }
+                                    total_perguntas_condicoes_especiais = len(
+                                        st.session_state["condicoes_especiais"]
+                                    )
 
+                                    # Determina a chave associada para perguntas_padrao e condicoes_especiais
+                                    if i <= total_perguntas_padrao:
+                                        # Perguntas padrão: Acessa diretamente as chaves correspondentes às perguntas padrão
+                                        json_keys_list = json_keys[
+                                            :total_perguntas_padrao
+                                        ]
+                                    else:
+                                        # Condições especiais: Continuar sequencialmente, sem reiniciar o índice
+                                        json_keys_list = json_keys
+                                    # st.write(json_keys_list)
+
+                                    try:
+                                        chaves_associadas = json_keys_list[
+                                            int(i) - 1
+                                        ].split(", ")
+                                    except IndexError as e:
+                                        print(
+                                            f"Erro ao acessar json_keys_list com índice {i-1}: {e}"
+                                        )
+                                        raise
+
+                                    respostas_filtradas = {
+                                        chave: resposta_llm.get(
+                                            chave, "Informação não encontrada"
+                                        )
+                                        for chave in chaves_associadas
+                                    }
                                     st.session_state["tempo_ia"] = (
-                                        st.session_state["tempo_vetorizacao"]
+                                        st.session_state.get("tempo_vetorizacao", 0)
                                         + st.session_state["tempo_Q&A"]
                                     )
 
-                                    print(
-                                        "\nRespostas filtradas: ", respostas_filtradas
-                                    )
-
+                                    pergunta_printada = False
                                     j = 1
                                     for item, resposta in respostas_filtradas.items():
-                                        st.markdown(f"**{pergunta_prompt}**")
+                                        if not pergunta_printada:
+                                            st.markdown(f"**{pergunta_prompt}**")
+                                            pergunta_printada = True
+
                                         grid = st.columns([0.6, 2.8, 4.5, 1.2, 4.5])
                                         indice = str(i) + "." + str(j)
                                         grid[0].markdown(indice)
