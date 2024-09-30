@@ -398,7 +398,39 @@ def main():
                         st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
 
-                        st.session_state["tipo_documento"] = response_tipo.strip('"')
+                        print(f"Resposta antes da formatação: {response_tipo}")
+
+                        response_tipo = response_tipo.strip('"')
+
+                        # Tratamento para tipos de documento
+                        # Possíveis combinações:
+                        #   Estatuto Social + Eleição de Diretoria
+                        #   Contrato Social + Procuração PJ
+                        #   Estatuto Social + Eleição de Diretoria + Procuração PJ
+                        if (
+                            "Estatuto Social" in response_tipo
+                            and "Eleição de Diretoria" in response_tipo
+                            and "Procuração PJ" in response_tipo
+                        ):
+                            response_tipo = (
+                                "Estatuto Social, Eleição de Diretoria, Procuração PJ"
+                            )
+                        elif (
+                            "Contrato Social" in response_tipo
+                            and "Procuração PJ" in response_tipo
+                        ):
+                            response_tipo = "Contrato Social, Procuração PJ"
+                        elif (
+                            "Estatuto Social" in response_tipo
+                            and "Eleição de Diretoria" in response_tipo
+                        ):
+                            response_tipo = "Estatuto Social, Eleição de Diretoria"
+                        else:
+                            # Caso não corresponda a nenhuma combinação completa, retorna apenas o primeiro documento identificado
+                            response_tipo = response_tipo.split(",")[0].strip()
+
+                        print(f"Resposta depois da formatação: {response_tipo}\n\n")
+                        st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
@@ -567,6 +599,7 @@ def main():
                                 response = response.replace("```json\n", "").replace(
                                     "\n```", ""
                                 )
+                                response = response.replace(";", ",")
                                 response = json.loads(response)
 
                                 with st.container(border=True):
