@@ -66,10 +66,6 @@ div[data-testid="stFileUploaderDropzoneInstructions"] svg {
   }
 }
 
-div[data-testid="stSidebarContent"] {
-  background-color: var(--background-support);
-}
-
 div[data-testid="stSidebarNavLink"] {
   &:hover {
     background-color: var(--light-blue);
@@ -357,4 +353,89 @@ label[data-baseweb="radio"] > div:first-child {
 [data-testid="stSidebarNavItems"] li:first-child {
   display: none !important;
   visibility: none !important;
+}
+
+/* Estilização de acordo com Figma Cockpit */
+[data-testid="stHeader"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stBottomBlockContainer"],
+div[data-testid="ScrollToBottomContainer"],
+.main,
+.stApp {
+  background-color: #f9f9f8 !important;
+}
+
+div[data-testid="stSidebarContent"] {
+  background-color: #fafafa !important;
+  box-shadow: 0px 3px 10px 0px #0000000a;
+}
+
+div[data-baseweb="base-input"] {
+  background-color: white;
+  border: none !important;
+  outline: none !important;
+}
+
+div[data-testid="stChatInput"] div[data-baseweb="textarea"] {
+  border: none;
+  border-radius: 5vh !important;
+  background-color: #f9f9f8;
+  box-shadow: 0px 3px 10px 0px #0000001f;
+  transition: 0.3s ease-in-out;
+
+  &:focus-within {
+    border: 1px solid rgb(211, 211, 211);
+  }
+}
+
+[data-testid="chatAvatarIcon-user"] {
+  background-color: var(--primary-medium);
+}
+
+[data-testid="chatAvatarIcon-assistant"] {
+  background-color: var(--secondary-medium);
+}
+
+div[data-testid="stChatInput"]:first-child {
+  background-color: #f9f9f8;
+  border-radius: 5vh !important;
+}
+
+[data-testid="stChatInputSubmitButton"] {
+  border-top-right-radius: 5vh !important;
+  border-bottom-right-radius: 5vh !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+[data-testid="stChatInputSubmitButton"]:hover {
+  background-color: var(--primary-medium);
+}
+
+hr[data-testid="stHeadingDivider"] {
+  background-color: #eeeeee;
+  height: 0.5px !important;
+}
+
+div[data-testid="stToolbar"] {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+[data-tedid="stSidebarNavLink"] {
+  color: var(--primary-medium);
+  font-weight: 500;
+  color: var(--text-color);
+  border-radius: var(--border-radius);
+
+  &:hover {
+    background-color: var(--light-blue);
+    color: var(--primary-medium);
+    font-weight: 500;
+  }
+
+  &:visited {
+    background-color: var(--light-blue);
+  }
 }

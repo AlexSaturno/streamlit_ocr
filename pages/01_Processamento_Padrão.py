@@ -85,10 +85,85 @@ def image_model(
 
 
 chain = load_images_chain | image_model
+
+
 ###############################################################################
-
-
 # Funcoes auxiliares
+def tratar_juntas(response):
+    if "Junta Comercial do Estado do Acre" in response:
+        response = response.replace("Junta Comercial do Estado do Acre", "JUCEAC")
+    elif "Junta Comercial do Estado de Alagoas" in response:
+        response = response.replace("Junta Comercial do Estado de Alagoas", "JUCEAL")
+    elif "Junta Comercial do Estado do Amazonas" in response:
+        response = response.replace("Junta Comercial do Estado do Amazonas", "JUCEA")
+    elif "Junta Comercial do Estado do Amapá" in response:
+        response = response.replace("Junta Comercial do Estado do Amapá", "JUCEAP")
+    elif "Junta Comercial do Estado da Bahia" in response:
+        response = response.replace("Junta Comercial do Estado da Bahia", "JUCEB")
+    elif "Junta Comercial do Estado do Ceará" in response:
+        response = response.replace("Junta Comercial do Estado do Ceará", "JUCEC")
+    elif "Junta Comercial do Distrito Federal" in response:
+        response = response.replace("Junta Comercial do Distrito Federal", "JUCIS")
+    elif "Junta Comercial do Estado do Espirito Santo" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Espirito Santo", "JUCEES"
+        )
+    elif "Junta Comercial do Estado de Goiás" in response:
+        response = response.replace("Junta Comercial do Estado de Goiás", "JUCEG")
+    elif "Junta Comercial do Estado do Maranhão" in response:
+        response = response.replace("Junta Comercial do Estado do Maranhão", "JUCEMA")
+    elif "Junta Comercial do Estado do Mato Grosso" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Mato Grosso", "JUCEMAT"
+        )
+    elif "Junta Comercial do Estado do Mato Grosso do Sul" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Mato Grosso do Sul", "JUCEMS"
+        )
+    elif "Junta Comercial do Estado de Minas Gerais" in response:
+        response = response.replace(
+            "Junta Comercial do Estado de Minas Gerais", "JUCEMG"
+        )
+    elif "Junta Comercial do Estado do Pará" in response:
+        response = response.replace("Junta Comercial do Estado do Pará", "JUCEPA")
+    elif "Junta Comercial do Estado da Paraíba" in response:
+        response = response.replace("Junta Comercial do Estado da Paraíba", "JUCEP")
+    elif "Junta Comercial do Estado do Paraná" in response:
+        response = response.replace("Junta Comercial do Estado do Paraná", "JUCEPAR")
+    elif "Junta Comercial do Estado de Pernambuco" in response:
+        response = response.replace("Junta Comercial do Estado de Pernambuco", "JUCEPE")
+    elif "Junta Comercial do Estado do Piauí" in response:
+        response = response.replace("Junta Comercial do Estado do Piauí", "JUCEPI")
+    elif "Junta Comercial do Estado do Rio de Janeiro" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Rio de Janeiro", "JUCERJA"
+        )
+    elif "Junta Comercial do Estado do Rio Grande do Norte" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Rio Grande do Norte", "JUCERN"
+        )
+    elif "Junta Comercial, Industrial e Serviços do Rio Grande do Sul" in response:
+        response = response.replace(
+            "Junta Comercial, Industrial e Serviços do Rio Grande do Sul", "JUCIRS"
+        )
+    elif "Junta Comercial do Estado de Rondônia" in response:
+        response = response.replace("Junta Comercial do Estado de Rondônia", "JUCER")
+    elif "Junta Comercial do Estado de Roraima" in response:
+        response = response.replace("Junta Comercial do Estado de Roraima", "JUCERR")
+    elif "Junta Comercial do Estado de Santa Catarina" in response:
+        response = response.replace(
+            "Junta Comercial do Estado de Santa Catarina", "JUCESC"
+        )
+    elif "Junta Comercial do Estado de São Paulo" in response:
+        response = response.replace("Junta Comercial do Estado de São Paulo", "JUCESP")
+    elif "Junta Comercial do Estado de Sergipe" in response:
+        response = response.replace("Junta Comercial do Estado de Sergipe", "JUCESE")
+    elif "Junta Comercial do Estado do Tocantins" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Tocantins", "JUCETINS"
+        )
+
+
 def normalize_filename(filename):
     # Mapeamento de caracteres acentuados para não acentuados
     substitutions = {
@@ -600,6 +675,10 @@ def main():
                                     "\n```", ""
                                 )
                                 response = response.replace(";", ",")
+
+                                # Tratamento de nome das juntas
+                                response = tratar_juntas(response)
+
                                 response = json.loads(response)
 
                                 with st.container(border=True):
