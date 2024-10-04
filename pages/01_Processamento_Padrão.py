@@ -163,6 +163,8 @@ def tratar_juntas(response):
             "Junta Comercial do Estado do Tocantins", "JUCETINS"
         )
 
+    return response
+
 
 def normalize_filename(filename):
     # Mapeamento de caracteres acentuados para não acentuados
@@ -674,8 +676,8 @@ def main():
                                 response = response.replace("```json\n", "").replace(
                                     "\n```", ""
                                 )
+                                # Substituir ; por , para não dar problema na transformação do csv
                                 response = response.replace(";", ",")
-
                                 # Tratamento de nome das juntas
                                 response = tratar_juntas(response)
 
