@@ -85,10 +85,87 @@ def image_model(
 
 
 chain = load_images_chain | image_model
+
+
 ###############################################################################
-
-
 # Funcoes auxiliares
+def tratar_juntas(response):
+    if "Junta Comercial do Estado do Acre" in response:
+        response = response.replace("Junta Comercial do Estado do Acre", "JUCEAC")
+    elif "Junta Comercial do Estado de Alagoas" in response:
+        response = response.replace("Junta Comercial do Estado de Alagoas", "JUCEAL")
+    elif "Junta Comercial do Estado do Amazonas" in response:
+        response = response.replace("Junta Comercial do Estado do Amazonas", "JUCEA")
+    elif "Junta Comercial do Estado do Amapá" in response:
+        response = response.replace("Junta Comercial do Estado do Amapá", "JUCEAP")
+    elif "Junta Comercial do Estado da Bahia" in response:
+        response = response.replace("Junta Comercial do Estado da Bahia", "JUCEB")
+    elif "Junta Comercial do Estado do Ceará" in response:
+        response = response.replace("Junta Comercial do Estado do Ceará", "JUCEC")
+    elif "Junta Comercial do Distrito Federal" in response:
+        response = response.replace("Junta Comercial do Distrito Federal", "JUCIS")
+    elif "Junta Comercial do Estado do Espirito Santo" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Espirito Santo", "JUCEES"
+        )
+    elif "Junta Comercial do Estado de Goiás" in response:
+        response = response.replace("Junta Comercial do Estado de Goiás", "JUCEG")
+    elif "Junta Comercial do Estado do Maranhão" in response:
+        response = response.replace("Junta Comercial do Estado do Maranhão", "JUCEMA")
+    elif "Junta Comercial do Estado do Mato Grosso" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Mato Grosso", "JUCEMAT"
+        )
+    elif "Junta Comercial do Estado do Mato Grosso do Sul" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Mato Grosso do Sul", "JUCEMS"
+        )
+    elif "Junta Comercial do Estado de Minas Gerais" in response:
+        response = response.replace(
+            "Junta Comercial do Estado de Minas Gerais", "JUCEMG"
+        )
+    elif "Junta Comercial do Estado do Pará" in response:
+        response = response.replace("Junta Comercial do Estado do Pará", "JUCEPA")
+    elif "Junta Comercial do Estado da Paraíba" in response:
+        response = response.replace("Junta Comercial do Estado da Paraíba", "JUCEP")
+    elif "Junta Comercial do Estado do Paraná" in response:
+        response = response.replace("Junta Comercial do Estado do Paraná", "JUCEPAR")
+    elif "Junta Comercial do Estado de Pernambuco" in response:
+        response = response.replace("Junta Comercial do Estado de Pernambuco", "JUCEPE")
+    elif "Junta Comercial do Estado do Piauí" in response:
+        response = response.replace("Junta Comercial do Estado do Piauí", "JUCEPI")
+    elif "Junta Comercial do Estado do Rio de Janeiro" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Rio de Janeiro", "JUCERJA"
+        )
+    elif "Junta Comercial do Estado do Rio Grande do Norte" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Rio Grande do Norte", "JUCERN"
+        )
+    elif "Junta Comercial, Industrial e Serviços do Rio Grande do Sul" in response:
+        response = response.replace(
+            "Junta Comercial, Industrial e Serviços do Rio Grande do Sul", "JUCIRS"
+        )
+    elif "Junta Comercial do Estado de Rondônia" in response:
+        response = response.replace("Junta Comercial do Estado de Rondônia", "JUCER")
+    elif "Junta Comercial do Estado de Roraima" in response:
+        response = response.replace("Junta Comercial do Estado de Roraima", "JUCERR")
+    elif "Junta Comercial do Estado de Santa Catarina" in response:
+        response = response.replace(
+            "Junta Comercial do Estado de Santa Catarina", "JUCESC"
+        )
+    elif "Junta Comercial do Estado de São Paulo" in response:
+        response = response.replace("Junta Comercial do Estado de São Paulo", "JUCESP")
+    elif "Junta Comercial do Estado de Sergipe" in response:
+        response = response.replace("Junta Comercial do Estado de Sergipe", "JUCESE")
+    elif "Junta Comercial do Estado do Tocantins" in response:
+        response = response.replace(
+            "Junta Comercial do Estado do Tocantins", "JUCETINS"
+        )
+
+    return response
+
+
 def normalize_filename(filename):
     # Mapeamento de caracteres acentuados para não acentuados
     substitutions = {
@@ -398,7 +475,39 @@ def main():
                         st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
 
-                        st.session_state["tipo_documento"] = response_tipo.strip('"')
+                        print(f"Resposta antes da formatação: {response_tipo}")
+
+                        response_tipo = response_tipo.strip('"')
+
+                        # Tratamento para tipos de documento
+                        # Possíveis combinações:
+                        #   Estatuto Social + Eleição de Diretoria
+                        #   Contrato Social + Procuração PJ
+                        #   Estatuto Social + Eleição de Diretoria + Procuração PJ
+                        if (
+                            "Estatuto Social" in response_tipo
+                            and "Eleição de Diretoria" in response_tipo
+                            and "Procuração PJ" in response_tipo
+                        ):
+                            response_tipo = (
+                                "Estatuto Social, Eleição de Diretoria, Procuração PJ"
+                            )
+                        elif (
+                            "Contrato Social" in response_tipo
+                            and "Procuração PJ" in response_tipo
+                        ):
+                            response_tipo = "Contrato Social, Procuração PJ"
+                        elif (
+                            "Estatuto Social" in response_tipo
+                            and "Eleição de Diretoria" in response_tipo
+                        ):
+                            response_tipo = "Estatuto Social, Eleição de Diretoria"
+                        else:
+                            # Caso não corresponda a nenhuma combinação completa, retorna apenas o primeiro documento identificado
+                            response_tipo = response_tipo.split(",")[0].strip()
+
+                        print(f"Resposta depois da formatação: {response_tipo}\n\n")
+                        st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
         if st.session_state["status_vetorizacao"]:
@@ -567,6 +676,11 @@ def main():
                                 response = response.replace("```json\n", "").replace(
                                     "\n```", ""
                                 )
+                                # Substituir ; por , para não dar problema na transformação do csv
+                                response = response.replace(";", ",")
+                                # Tratamento de nome das juntas
+                                response = tratar_juntas(response)
+
                                 response = json.loads(response)
 
                                 with st.container(border=True):
