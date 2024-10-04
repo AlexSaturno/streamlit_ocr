@@ -39,7 +39,7 @@ def convert_pdf_to_images(pdf_path):
         os.makedirs(img_path)
     images = convert_from_path(
         pdf_path=pdf_path,
-        poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
+        # poppler_path=r"C:\Release-24.02.0-0\poppler-24.02.0\Library\bin",
     )
     for i in range(len(images)):
         images[i].save(os.path.join(img_path, "page" + str(i) + ".jpg"), "JPEG")
