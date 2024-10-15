@@ -320,6 +320,9 @@ def main():
     if "respostas_download_pdf" not in st.session_state:
         st.session_state["respostas_download_pdf"] = None
 
+    if "respostas_download_json" not in st.session_state:
+        st.session_state["respostas_download_json"] = None
+
     if "file_name" not in st.session_state:
         st.session_state["file_name"] = None
 
@@ -965,6 +968,16 @@ def main():
                             sep=";", index=False, header=False, lineterminator="\n"
                         )
 
+                        formatted_output_VPOCRL = df_avaliacao[["item", "saida_FPO"]].T
+                        formatted_output_VPOCRL = formatted_output_VPOCRL.to_dict(
+                            orient="index"
+                        )
+                        formatted_output_VPOCRL = json.dumps(
+                            formatted_output_VPOCRL,
+                            indent=4,
+                            ensure_ascii=False,
+                        )
+
                         for k in range(len(df_avaliacao)):
                             nro = df_avaliacao.iloc[k]["#"]
                             item = df_avaliacao.iloc[k]["item"]
@@ -979,6 +992,9 @@ def main():
                         st.session_state["respostas_download_pdf"] = (
                             formatted_output_IMG
                         )
+                        st.session_state["respostas_download_json"] = (
+                            formatted_output_VPOCRL
+                        )
 
                         buf = io.StringIO()
                         buf.write(formatted_output_FPO)
@@ -990,6 +1006,22 @@ def main():
                         full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
 
                         col1, col2, col3 = st.columns([4, 1, 1])
+                        with col1:
+                            st.write("")
+                            json_file_store_name = full_path + ".json"
+                            json_file_download_name = id_unico + ".json"
+                            if st.download_button(
+                                "Download VPO/CRL",
+                                data=formatted_output_VPOCRL,
+                                file_name=json_file_download_name,
+                                mime="application/json",
+                                disabled=st.session_state["disable_downloads"],
+                            ):
+                                with open(
+                                    json_file_store_name, "w", encoding="utf-8"
+                                ) as file:
+                                    file.write(formatted_output_VPOCRL)
+
                         with col2:
                             st.write("")
                             txt_file_download_name = id_unico + ".txt"
@@ -1001,7 +1033,6 @@ def main():
                                 on_click=export_result,
                                 disabled=st.session_state["disable_downloads"],
                             ):
-
                                 with open(
                                     full_path + ".json", "w", encoding="utf-8"
                                 ) as f:
@@ -1012,6 +1043,7 @@ def main():
                         with col3:
                             st.write("")
                             # Output PDF file
+                            full_path = os.path.join(CAMINHO_SUGERIDO, id_unico)
                             pdf_file_store_name = full_path + ".pdf"
                             st.session_state["pdf_IMG"] = pdf_file_store_name
 
