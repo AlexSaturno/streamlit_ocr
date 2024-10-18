@@ -987,7 +987,8 @@ def main():
                         def export_result():
                             buf.seek(0)
 
-                        full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
+                        # full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
+                        full_path = os.path.join(CAMINHO_SUGERIDO, id_unico)
 
                         col1, col2, col3 = st.columns([4, 1, 1])
                         with col2:
