@@ -987,8 +987,7 @@ def main():
                         def export_result():
                             buf.seek(0)
 
-                        # full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
-                        full_path = os.path.join(CAMINHO_SUGERIDO, id_unico)
+                        full_path = os.path.join(PASTA_RESPOSTAS, id_unico)
 
                         col1, col2, col3 = st.columns([4, 1, 1])
                         with col2:
@@ -1007,7 +1006,9 @@ def main():
                                     full_path + ".json", "w", encoding="utf-8"
                                 ) as f:
                                     json.dump(st.session_state["Q&A"], f, indent=4)
-                                with open(full_path + ".txt", "w") as file:
+
+                                full_path_FPO = os.path.join(CAMINHO_SUGERIDO, id_unico)
+                                with open(full_path_FPO + ".txt", "w") as file:
                                     file.write(formatted_output_FPO)
 
                         with col3:
