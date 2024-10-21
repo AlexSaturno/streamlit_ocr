@@ -5,13 +5,9 @@ from pathlib import Path
 import os
 from pdf2image import convert_from_path
 from configs import *
-import shutil
 
 
-PASTA_RAIZ = (
-    Path(__file__).parent
-    # r"C:\Projetos\Asimov Academy\Projetos\POCs banco\Projetos\FPO\FPO\02_staging\UI"
-)
+PASTA_RAIZ = Path(__file__).parent
 PASTA_IMAGENS_DEBUG = Path(__file__).parent / "imagens_debug"
 PASTA_IMAGENS = Path(__file__).parent / "files_images"
 PASTA_VECTORDB = Path(__file__).parent / "vectordb"
