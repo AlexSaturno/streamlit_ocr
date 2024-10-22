@@ -14,6 +14,7 @@ PASTA_VECTORDB = Path(__file__).parent / "vectordb"
 PASTA_ARQUIVOS = Path(__file__).parent / "uploaded_files"
 PASTA_RESPOSTAS = Path(__file__).parent / "respostas"
 PASTA_AVALIACAO = Path(__file__).parent / "avaliacao"
+PASTA_DOWNLOAD = r"C:\Users\Public"
 CAMINHO_SUGERIDO = Path(
     # r"C:\Users\alexa\Documents\Testes do FPO"
     r"\\vega\BackOffice BS\2 - BO CADASTRO E FIRMAS\FIRMAS\BO Firmas\IA - FPO"
