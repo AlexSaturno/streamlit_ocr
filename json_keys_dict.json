@@ -4,15 +4,15 @@
         "junta_comercial, data_ata, numero_registro_ata",
         "data_contrato",
         "consolidacao",
-        "isoladamente",
         "nome_administradores, cpf_administradores, mandato_administradores",
         "qtd_min_representacao",
-        "gar_terc2",
-        "alien_imoveis2",
+        "CPF_CNPJ_socios, Tipo_socios",
+        "garantias",
+        "alienacao",
         "alien_moveis2",
-        "contratos2",
-        "repr_bancaria2",
-        "procuracao2"
+        "obrigacoes",
+        "movimentacao",
+        "procuracao"
     ],
     "Procura\u00e7\u00e3o PJ": [
         "nome_companhia, cnpj_companhia",
