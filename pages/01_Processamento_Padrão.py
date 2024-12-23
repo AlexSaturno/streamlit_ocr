@@ -961,9 +961,15 @@ def main():
                         )
 
                         formatted_output_FPO = ""
-                        formatted_output_FPO = df_avaliacao[["item", "saida_FPO"]].T
-                        formatted_output_FPO = formatted_output_FPO.to_csv(
-                            sep=";", index=False, header=False, lineterminator="\n"
+                        # formatted_output_FPO = df_avaliacao[["item", "saida_FPO"]].T
+                        # formatted_output_FPO = formatted_output_FPO.to_csv(
+                        #     sep=";", index=False, header=False, lineterminator="\n"
+                        # )
+                        formatted_output_FPO = df_avaliacao.set_index("item")[
+                            "saida_FPO"
+                        ].to_dict()
+                        formatted_output_FPO = json.dumps(
+                            formatted_output_FPO, ensure_ascii=False, indent=4
                         )
 
                         for k in range(len(df_avaliacao)):
@@ -1007,31 +1013,8 @@ def main():
                                     full_path + ".json", "w", encoding="utf-8"
                                 ) as f:
                                     json.dump(st.session_state["Q&A"], f, indent=4)
-
-                                # full_path_FPO = os.path.join(PASTA_DOWNLOAD, id_unico)
-                                # with open(full_path_FPO + ".txt", "w") as file:
                                 with open(full_path + ".txt", "w") as file:
                                     file.write(formatted_output_FPO)
-
-                                # nome_arquivo = id_unico + ".txt"
-                                # caminho_arquivo = os.path.join(
-                                #     PASTA_DOWNLOAD, nome_arquivo
-                                # )
-                                # if os.path.isfile(caminho_arquivo):
-                                #     try:
-                                #         shutil.move(
-                                #             caminho_arquivo,
-                                #             os.path.join(
-                                #                 CAMINHO_SUGERIDO, nome_arquivo
-                                #             ),
-                                #         )
-                                #         print(
-                                #             f"Arquivo '{nome_arquivo}' movido para '{CAMINHO_SUGERIDO}'."
-                                #         )
-                                #     except Exception as e:
-                                #         print(
-                                #             f"Erro ao mover o arquivo '{nome_arquivo}': {e}"
-                                #         )
 
                         with col3:
                             st.write("")
