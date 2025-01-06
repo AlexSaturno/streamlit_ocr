@@ -68,8 +68,6 @@
 # 001
 #                                                                                                                                                                                                                                                                                ;
 #                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
-
-import array
 import pyodbc
 import json
 import requests
@@ -80,11 +78,13 @@ from utils import (
     validar_cnpj,
     normalizar_string,
     validar_condicoes_especiais,
+    de_para_numeros,
 )
 
 
 def processar_json(estrutura_json):
-    dados = json.loads(estrutura_json)
+    # dados = json.loads(estrutura_json)
+    dados = estrutura_json
 
     obrigatorios = [
         "cnpj_companhia",
@@ -98,6 +98,13 @@ def processar_json(estrutura_json):
         "qtd_min_representacao",
     ]
 
+    if dados["combinacao_adm"] == "Informação não encontrada":
+        dados["combinacao_adm"] = "1|" + "|".join(
+            dados["cpf_administradores"].split(",")
+        )
+        dados["qtd_min_representacao"] = "1"
+        print("Combinação editada: ", dados["combinacao_adm"])
+
     for campo in obrigatorios:
         if not dados.get(campo) or dados[campo].upper() == "INFORMAÇÃO NÃO ENCONTRADA":
             raise ValueError(f"Campo obrigatório ausente ou inválido: {campo}")
@@ -108,17 +115,20 @@ def processar_json(estrutura_json):
     if dados["numero_registro_ata"].upper() == "NÃO ESTÁ REGISTRADO":
         raise ValueError("Número de registro da ata inválido")
 
-    if (
-        not dados["qtd_min_representacao"].isdigit()
-        or int(dados["qtd_min_representacao"]) < 1
-    ):
+    if not dados["qtd_min_representacao"].isdigit():
+        dados["qtd_min_representacao"] = de_para_numeros(dados["qtd_min_representacao"])
+    elif int(dados["qtd_min_representacao"]) < 1:
         raise ValueError("Quantidade mínima de representação inválida")
 
     if validar_cnpj(dados["cnpj_companhia"]) is False:
         raise ValueError("CNPJ inválido")
+    dados["cnpj_companhia"] = re.sub(r"\D", "", dados["cnpj_companhia"])
+    dados["numero_registro_ata"] = re.sub(r"\D", "", dados["numero_registro_ata"])
+    dados["data_ata"] = dados["data_ata"].replace("/", ".")
+    dados["data_contrato"] = dados["data_contrato"].replace("/", ".")
 
-    if not validar_condicoes_especiais(dados):
-        raise ValueError("Condições especiais inválidas")
+    # if not validar_condicoes_especiais(dados):
+    #     raise ValueError("Condições especiais inválidas")
 
     cpfs_adm = dados["cpf_administradores"].split(",")
     combinacoes = dados["combinacao_adm"].split(",")
@@ -143,15 +153,14 @@ def processar_json(estrutura_json):
 
 def coletar_dados_CCL(cnpj_companhia, tipo_doc):
     # Tratar o CNPJ e separar em base e filial
-    cnpj = re.sub(r"\D", "", cnpj_companhia)
-    base = cnpj[:8].zfill(9)
-    filial = cnpj[8:12].zfill(4)
+    base = cnpj_companhia[:8].zfill(9)
+    filial = cnpj_companhia[8:12].zfill(4)
     flag = ""
 
     urls = [
-        "https://mf-hom.safra.com.br:9443/CCLQ16SEL01/T",
-        "https://mf-hom.safra.com.br:9443/CCLQ16SEL02/T",
-        "https://mf-hom.safra.com.br:9443/CCLQ16SEL03/T",
+        "https://mf-hom.safra.com.br:9443/CCLQ16SEL01/H",
+        "https://mf-hom.safra.com.br:9443/CCLQ16SEL02/H",
+        "https://mf-hom.safra.com.br:9443/CCLQ16SEL03/H",
     ]
 
     queries = [
@@ -192,7 +201,7 @@ def coletar_dados_CCL(cnpj_companhia, tipo_doc):
         response3 = requests.post(
             urls[2], headers=headers, json=queries[2], verify=False
         )
-        if response3.status_code != 200 or response3.json()["StatusCode"]:
+        if response3.status_code != 200 or response3.json()["StatusCode"] != 200:
             flag = f"Erro ao fazer o POST na terceira query: {response3.text}"
 
         if not data1:
@@ -203,26 +212,25 @@ def coletar_dados_CCL(cnpj_companhia, tipo_doc):
         return f"Erro ao conectar: {str(e)}"
 
 
-def formatar_saida(dados, administrador, objeto, posicao):
-    cpf_administrador = dados["cpf_administradores"].split(",")[posicao]
-    grupo_matriz = ""
-    objeto_matriz = ""
-    ato_matriz = ""
+def formatar_saida(
+    dados, numero_combinacao, administrador, posicao_adm, objeto, posicao_obj
+):
+    def ajustar_tamanho_str(info, tamanho):
+        if len(info) > tamanho:
+            return info[:tamanho]
+        return info.ljust(tamanho)
+
+    def ajustar_tamanho_numero(info, tamanho):
+        return str(info).zfill(tamanho)
+
+    cpf_administrador = re.sub(
+        r"\D", "", (dados["cpf_administradores"].split(",")[posicao_adm])
+    )
     atribuicao_ia = ""
-    combinacao_ia = ""
 
     objeto_condicao_especial = objeto.split("-")[3]
 
-    combinacoes = dados["combinacao_adm"].split(", ")
     grupos = dados["grupo_administradores"].split(", ")
-    for combinacao in combinacoes:
-        # Separando o número da combinação e os CPFs/CNPJs
-        numero, *cpfs = combinacao.split("|")
-        # Verificando se o CPF/CNPJ está na combinação
-        if cpf_administrador in cpfs:
-            combinacao_ia = numero
-            break
-
     for grupo in grupos:
         # Separando o nome do grupo e os CPFs/CNPJs
         nome_grupo, *cpfs = grupo.split("|")
@@ -231,41 +239,44 @@ def formatar_saida(dados, administrador, objeto, posicao):
             atribuicao_ia = nome_grupo
             break
 
-    agencia = dados["agencia"].ljust(5)
-    conta = dados["conta"].ljust(7)
-    cnpj = dados["cnpj_companhia"].ljust(14)
-    tipo_conta = "02".ljust(2)
-    cod_gerente = "00000".ljust(5)
-    matricula = "999999".ljust(6)
-    operador = "IA FPO".ljust(15)
-    tipo_usuario = "BO".ljust(2)
-    tipo_doc = "CONSO".ljust(5)
-    data_inicio_doc = dados["data_contrato"].ljust(10)
-    data_fim_doc = "01.01.0001".ljust(10)
-    qtd_assinaturas = dados["qtd_min_representacao"].ljust(2)
-    valor_alcada = "00000000000000000".ljust(17)
-    prazo_alcada = "000".ljust(3)
-    cpf_rep = cpf_administrador.ljust(11)
-    nome_rep = administrador.ljust(30)
-    data_inicio_mandato = dados["data_contrato"].ljust(10)
-    data_fim_mandato = "01.01.0001".ljust(10)
-    perc_rep = "000000000000000".ljust(15)
-    grupo = dados["matriz"].ljust(2)
-    objeto = dados["matriz"].ljust(10)
-    ato = dados["matriz"].ljust(2)
-    cargo = "ADMINISTRADOR".ljust(15)
-    atribuicao = atribuicao_ia.ljust(15)
-    num_proc = "".ljust(15)
-    livro = "".ljust(4)
-    folha = "".ljust(3)
-    junta_comercial = (dados["junta_comercial"] + dados["numero_registro_ata"]).ljust(
-        20
+    agencia = ajustar_tamanho_numero(dados["agencia"], 5)
+    conta = ajustar_tamanho_numero(dados["conta"], 7)
+    cnpj = ajustar_tamanho_numero(dados["cnpj_companhia"], 14)
+    tipo_conta = ajustar_tamanho_str("02", 2)
+    cod_gerente = ajustar_tamanho_str("00000", 5)
+    matricula = ajustar_tamanho_str("999999", 6)
+    operador = ajustar_tamanho_str("IA FPO", 15)
+    tipo_usuario = ajustar_tamanho_str("BO", 2)
+    tipo_doc = ajustar_tamanho_str("CONSO", 5)
+    data_inicio_doc = ajustar_tamanho_str(dados["data_contrato"], 10)
+    data_fim_doc = ajustar_tamanho_str("01.01.0001", 10)
+    qtd_assinaturas = ajustar_tamanho_numero(dados["qtd_min_representacao"], 2)
+    valor_alcada = ajustar_tamanho_str("00000000000000000", 17)
+    prazo_alcada = ajustar_tamanho_str("000", 3)
+    cpf_rep = ajustar_tamanho_numero(cpf_administrador, 11)
+    nome_rep = ajustar_tamanho_str(administrador, 30)
+    data_inicio_mandato = ajustar_tamanho_str(dados["data_contrato"], 10)
+    data_fim_mandato = ajustar_tamanho_str("01.01.0001", 10)
+    perc_rep = ajustar_tamanho_str("000000000000000", 15)
+    grupo = ajustar_tamanho_str(dados["poderes"][posicao_obj]["GRP_OBJ"], 2)
+    objeto = ajustar_tamanho_str(dados["poderes"][posicao_obj]["OBJETO"], 10)
+    ato = ajustar_tamanho_str(dados["poderes"][posicao_obj]["ATO"], 2)
+    cargo = ajustar_tamanho_str("ADMINISTRADOR", 15)
+    atribuicao = ajustar_tamanho_str(atribuicao_ia, 15)
+    num_proc = ajustar_tamanho_str("", 15)
+    livro = ajustar_tamanho_str("", 4)
+    folha = ajustar_tamanho_str("", 3)
+    junta_comercial = ajustar_tamanho_str(
+        dados["junta_comercial"] + dados["numero_registro_ata"], 20
     )
-    data_junta_comercial = dados["data_ata"].ljust(10)
-    flag_cond_espec = dados["poderes"][posicao]["COND_ESP"].ljust(1)
-    combinacao = combinacao_ia.ljust(3)
-    filler = "".ljust(271)
-    cond_espec = dados[objeto_condicao_especial].ljust(1950)
+    data_junta_comercial = ajustar_tamanho_str(dados["data_ata"], 10)
+    flag_cond_espec = ajustar_tamanho_str(dados["poderes"][posicao_obj]["COND_ESP"], 1)
+    combinacao = ajustar_tamanho_numero(numero_combinacao, 3)
+    filler = ajustar_tamanho_str("", 271)
+    if flag_cond_espec == "N":
+        cond_espec = ajustar_tamanho_str("", 1950)
+    else:
+        cond_espec = ajustar_tamanho_str(dados[objeto_condicao_especial], 1950)
 
     # Monta o texto final
     linha = (
@@ -306,6 +317,7 @@ def formatar_saida(dados, administrador, objeto, posicao):
 
     # Validar tamanho da linha
     if len(linha) != 2500:
+        print(linha)
         raise ValueError(
             f"A linha gerada não possui 2500 caracteres. Tamanho atual: {len(linha)}"
         )
@@ -395,34 +407,93 @@ def gerar_arquivo_txt(dados, caminho_arquivo):
     if flag:
         return flag
 
-    dados["agencia"] = ag_cc["AGE"]
-    dados["conta"] = ag_cc["CONTA"]
-
     dados["poderes"] = poderes
 
-    # Cada administrador da lista tem que ter 74 linhas, e cada linha é associada a um objeto do array
+    lista_nomes = dados["nome_administradores"].split(",")
+
+    # Separando o número da combinação e os CPFs/CNPJs
+    combinacoes = dados["combinacao_adm"].split(", ")
+
+    # Cada administrador da lista tem que ter pelo menos 74 linhas, e cada linha é associada a um objeto do array
+    # Isso deve ser processado para cada combinação em que o administrador fizer parte
+    # E esse processo todo deve ser replicado para cada conta que esse CNPJ possuir (query1/query2)
     lista_linhas = []
-    for administrador in dados["nome_administradores"].split(","):
-        for posicao, objeto in enumerate(array_obj_contrato):
-            linha = formatar_saida(dados, administrador, objeto, posicao)
-            lista_linhas.append(linha)
-    
+    nomes_na_combinacao = []
+    for combinacao in combinacoes:
+        numero_combinacao, *cpfs_da_combinacao = combinacao.split("|")
+    for cpf in cpfs_da_combinacao:
+        index = cpfs_da_combinacao.index(cpf)
+        nomes_na_combinacao.append(lista_nomes[index])
+
+    for posicao_conta, agencia_conta in enumerate(ag_cc):
+        dados["agencia"] = ag_cc[posicao_conta][
+            "AGE"
+        ]  # COD_CLI; BASE_CNPJ; FILIAL; DV; AGE; CONTA
+        dados["conta"] = ag_cc[posicao_conta]["CONTA"]
+        for administrador in nomes_na_combinacao:
+            for posicao_obj, objeto in enumerate(array_obj_contrato):
+                linha = formatar_saida(
+                    dados, numero_combinacao, administrador, index, objeto, posicao_obj
+                )
+                lista_linhas.append(linha)
+
+        # for posicao_adm, administrador in enumerate(dados["nome_administradores"].split(",")):
+        #     for posicao_combinacao, combinacao in enumerate(dados["combinacao_adm"].split(", ")):
+        #         for posicao_obj, objeto in enumerate(array_obj_contrato):
+        #             linha = formatar_saida(dados, administrador, objeto, posicao_adm, posicao_obj)
+        #             lista_linhas.append(linha)
+
     string_linhas = "\n".join(lista_linhas)
+    print("Quantidade de linhas: ", len(lista_linhas))
     with open(caminho_arquivo, "w") as arquivo:
         arquivo.write(string_linhas)
 
 
 def main():
     # 1. Pulling no banco de dados para ver se tem registros a serem processados
-    conn = pyodbc.connect(
-        "DRIVER={SQL Server};SERVER=server_name;DATABASE=database_name;UID=user;PWD=password"
-    )
-    cursor = conn.cursor()
+    driver_name = ""
+    driver_names = [x for x in pyodbc.drivers() if x.endswith(" for SQL Server")]
+    if driver_names:
+        driver_name = driver_names[0]
 
-    cursor.execute(
-        "SELECT id, estrutura_json, status FROM tabela WHERE status = 'PENDENTE'"
-    )
-    registros = cursor.fetchall()
+    if driver_name:
+        server_name = "SDDB039VT"
+        database_name = "DB_FPO_LOGS"
+        conn = pyodbc.connect(
+            f"DRIVER={driver_name};SERVER={server_name};DATABASE={database_name}; Trusted_Connection=Yes;"
+        )
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, estrutura_json, status FROM tabela WHERE status = 'PENDENTE'"
+        )
+        registros = cursor.fetchall()
+    else:
+        print("(No suitable driver found. Cannot connect.)")
+
+    estrutura_json = {
+        "nome_companhia": "DIMA COSMÉTICOS LTDA EPP",
+        "cnpj_companhia": "17.439.839/0001-23",
+        "junta_comercial": "JUCEPE",
+        "data_ata": "22/08/2023",
+        "numero_registro_ata": "20238859916",
+        "data_contrato": "10/08/2023",
+        "consolidacao": "sim",
+        "nome_administradores": "Diogo Andrade Rodrigues, Manuela Barbosa de Albuquerque e Mello",
+        "cpf_administradores": "028.266.124-76, 036.133.154-16",
+        "mandato_administradores": "Informação não encontrada",
+        "grupo_administradores": "Informação não encontrada",
+        "combinacao_adm": "Informação não encontrada",
+        "qtd_min_representacao": "Informação não encontrada",
+        "CPF_CNPJ_socios": "028.266.124-76, 036.133.154-16",
+        "Tipo_socios": "CPF, CPF",
+        "garantias": "Cláusula Décima, parágrafo único: (...) vedado, no entanto, fazê-lo em atividades estranhas ao interesse social ou assumir obrigações seja em favor de qualquer dos quotistas ou de terceiros, bem como onerar ou alienar bens imóveis da sociedade, sem autorização do(s) outro(s) sócio(s).",
+        "alienacao": "Cláusula Décima, parágrafo único: (...) vedado, no entanto, fazê-lo em atividades estranhas ao interesse social ou assumir obrigações seja em favor de qualquer dos quotistas ou de terceiros, bem como onerar ou alienar bens imóveis da sociedade, sem autorização do(s) outro(s) sócio(s).",
+        "alien_moveis2": "Informação não encontrada",
+        "obrigacoes": "Informação não encontrada",
+        "movimentacao": "Informação não encontrada",
+        "procuracao": "Informação não encontrada",
+    }
 
     # Processamento de cada registro com status PENDENTE
     for registro in registros:

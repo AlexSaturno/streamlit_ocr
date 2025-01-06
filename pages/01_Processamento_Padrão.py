@@ -13,6 +13,7 @@ from langchain_core.runnables import chain
 
 from datetime import datetime, timedelta
 import os
+import requests
 import time
 import json
 import tiktoken
@@ -1040,14 +1041,46 @@ def main():
                             # Build the PDF document
                             pdf_document.build(pdf_elements)
 
-                            pdf_file_download_name = id_unico + ".pdf"
-                            with open(pdf_file_store_name, "rb") as f:
-                                st.download_button(
-                                    "Download IMG",
-                                    f,
-                                    pdf_file_download_name,
-                                    disabled=st.session_state["disable_downloads"],
+                            # Converter o PDF em base64
+                            pdf_buffer = io.BytesIO()
+                            pdf_buffer.seek(0)  # Voltar ao início do buffer
+                            pdf_base64 = base64.b64encode(pdf_buffer.read()).decode(
+                                "utf-8"
+                            )  # String base64
+
+                            if st.button(
+                                "Enviar para API IMG",
+                                disabled=st.session_state["disable_downloads"],
+                            ):
+                                # Configurar dados para enviar para a API
+                                api_url = "https://sua-api-endpoint.com/upload"
+                                headers = {"Content-Type": "application/json"}
+                                data = {
+                                    "id_unico": id_unico,
+                                    "pdf_base64": pdf_base64,  # String base64 do PDF
+                                }
+
+                                # Envio para a API
+                                response = requests.post(
+                                    api_url, json=data, headers=headers
                                 )
+
+                                # Exibir resposta da API
+                                if response.status_code == 200:
+                                    st.success("PDF enviado com sucesso!")
+                                else:
+                                    st.error(
+                                        f"Erro ao enviar PDF: {response.status_code} - {response.text}"
+                                    )
+
+                            # pdf_file_download_name = id_unico + ".pdf"
+                            # with open(pdf_file_store_name, "rb") as f:
+                            #     st.download_button(
+                            #         "Download IMG",
+                            #         f,
+                            #         pdf_file_download_name,
+                            #         disabled=st.session_state["disable_downloads"],
+                            #     )
 
                         st.write("")
                         st.write("")

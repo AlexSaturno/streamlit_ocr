@@ -127,3 +127,20 @@ def validar_condicoes_especiais(dados):
         ]:
             return False
     return True
+
+def de_para_numeros(texto):
+    substituicoes = {
+        "ZERO": "0",
+        "UM": "1",
+        "DOIS": "2",
+        "TRES": "3",
+        "QUATRO": "4",
+        "CINCO": "5",
+        "SEIS": "6",
+        "SETE": "7",
+        "OITO": "8",
+        "NOVE": "9",
+    }
+    for original, substituto in substituicoes.items():
+        texto = texto.upper().replace(original, substituto)
+    return texto
