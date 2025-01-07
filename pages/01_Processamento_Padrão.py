@@ -477,7 +477,7 @@ def main():
                         st.session_state["tempo_vetorizacao"] = tempo_vetorizacao
                         st.session_state["tempo_ia"] = 0
 
-                        print(f"Resposta antes da formatação: {response_tipo}")
+                        # print(f"Resposta antes da formatação: {response_tipo}")
 
                         response_tipo = response_tipo.strip('"')
 
@@ -508,7 +508,7 @@ def main():
                             # Caso não corresponda a nenhuma combinação completa, retorna apenas o primeiro documento identificado
                             response_tipo = response_tipo.split(",")[0].strip()
 
-                        print(f"Resposta depois da formatação: {response_tipo}\n\n")
+                        # print(f"Resposta depois da formatação: {response_tipo}\n\n")
                         st.session_state["tipo_documento"] = response_tipo
 
         st.write("")
@@ -534,7 +534,7 @@ def main():
                 for tipo_doc in tipo_documentos:
                     if tipo_doc in perguntas:
                         perguntas_do_tipo = perguntas[tipo_doc]
-                        print("Perguntas do tipo: ", perguntas_do_tipo)
+                        # print("Perguntas do tipo: ", perguntas_do_tipo)
                         if "perguntas_padrao" in perguntas_do_tipo:
                             perguntas_padrao.extend(
                                 list(perguntas_do_tipo["perguntas_padrao"].values())
@@ -1024,7 +1024,9 @@ def main():
                             st.session_state["pdf_IMG"] = pdf_file_store_name
 
                             # Create a PDF document
-                            pdf_document = SimpleDocTemplate(pdf_file_store_name)
+                            pdf_buffer = io.BytesIO()
+                            # pdf_document = SimpleDocTemplate(pdf_file_store_name)
+                            pdf_document = SimpleDocTemplate(pdf_buffer)
                             pdf_elements = []
 
                             # Create a stylesheet for styling
@@ -1042,11 +1044,10 @@ def main():
                             pdf_document.build(pdf_elements)
 
                             # Converter o PDF em base64
-                            pdf_buffer = io.BytesIO()
-                            pdf_buffer.seek(0)  # Voltar ao início do buffer
+                            pdf_buffer.seek(0)
                             pdf_base64 = base64.b64encode(pdf_buffer.read()).decode(
                                 "utf-8"
-                            )  # String base64
+                            )
 
                             if st.button(
                                 "Enviar para API IMG",
@@ -1056,9 +1057,14 @@ def main():
                                 api_url = "https://sua-api-endpoint.com/upload"
                                 headers = {"Content-Type": "application/json"}
                                 data = {
-                                    "id_unico": id_unico,
-                                    "pdf_base64": pdf_base64,  # String base64 do PDF
+                                    "binary": pdf_base64,
+                                    "cpfCnpj": json.loads(
+                                        st.session_state["respostas_download_txt"]
+                                    )["cnpj_companhia"],
+                                    "registro": id_unico + ".pdf",
                                 }
+
+                                print("\n\nPayload: ", data)
 
                                 # Envio para a API
                                 response = requests.post(
